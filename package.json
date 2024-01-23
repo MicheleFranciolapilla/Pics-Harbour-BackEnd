@@ -1,6 +1,9 @@
 {
   "name": "pics-harbour-local-backend-node-js",
   "version": "1.0.0",
+  "prisma": {
+    "seed": "node prisma/superAdminSeeder.js"
+  },
   "description": "BackEnd (API) written in Node JS, related to the project Pics Harbour (Local)",
   "main": "server.js",
   "scripts": {
