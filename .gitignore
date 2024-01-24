@@ -1,4 +1,6 @@
-node_modules
-public
-prisma/migrations
+node_modules/
+public/
+prisma/migrations/
+documents/
+out/
 .env
