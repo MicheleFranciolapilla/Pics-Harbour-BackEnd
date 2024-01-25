@@ -2,13 +2,15 @@ const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
+
 const ErrorEmailNotNew = require("../../../exceptionsAndMiddlewares/exceptions/ErrorEmailNotNew");
 const ErrorFromDB = require("../../../exceptionsAndMiddlewares/exceptions/ErrorFromDB");
+const ErrorResourceNotFound = require("../../../exceptionsAndMiddlewares/exceptions/ErrorResourceNotFound");
+const ErrorWrongData = require("../../../exceptionsAndMiddlewares/exceptions/ErrorWrongData");
 
 const { removeProperties } = require("../../../utilities/general");
 const { formattedOutput } = require("../../../utilities/consoleOutput");
-
-const tokenLifeTime = "1h";
+const { tokenLifeTime } = require("../../../utilities/variables");
 
 /**
  * Consente la registrazione di un nuovo utente (Admin). Nel caso di esito positivo effettua il logIn dello stesso.
@@ -61,4 +63,38 @@ async function signUp(req, res, next)
     }
 }
 
-module.exports = { signUp }
+/**
+ * Esegue il log In dell'utente. 
+ * L'operazione va a buon fine se, oltre alla positiva validazione dei dati forniti, email e password risultano corrette.
+ * @function
+ * @async
+ * @param {Object} req - Oggetto "express request"
+ * @param {Object} res - Oggetto "express response"
+ * @param {Function} next - Middleware "express next"
+ * @returns {Promise<{ userToLog: Object, token: string }>|Error} - Promise che si risolve con un oggetto le cui proprietà sono "userToLog" (senza la proprietà password) e "token" (JWT con durata stabilita, generato al netto della password) in caso di successo, o viene respinta con un errore in caso di fallimento.
+ */
+async function logIn(req, res, next)
+{
+    const { email, password } = req.body;
+    try
+    {
+        const userToLog = await prisma.user.findUnique({ "where" : { "email" : email } });
+        if (!userToLog)
+            return next(new ErrorResourceNotFound("Email", "AUTH - LOGIN - TRY"));
+        // Se l'email esiste si prosegue verificando la correttezza della password, confrontando, mediante il metodo bcrypt.compare, la password (plain) ricevuta dal client con la password criptata ricavata dal db
+        const checkPsw = await bcrypt.compare(password, userToLog.password);
+        if (!checkPsw)
+            return next(new ErrorWrongData("password", "AUTH - LOGIN - TRY"));
+        // Se la password è corretta si prosegue con l'ottenimento del jwt
+        removeProperties([userToLog], "password");
+        const token = jwt.sign(userToLog, process.env.JWT_SECRET, { expiresIn : tokenLifeTime });
+        formattedOutput("AUTH - LOGIN - SUCCESS", "***** Status: 200", "***** Logged user: ", userToLog, "***** Token: ", token);
+        return res.json({ userToLog, token });
+    }
+    catch(error)
+    {
+        return next(new ErrorFromDB("Service temporarily unavailable", 503, "AUTH - LOGIN - CATCH"));
+    }
+}
+
+module.exports = { signUp, logIn }

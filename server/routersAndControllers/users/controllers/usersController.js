@@ -1,5 +1,6 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
+
 const ErrorFromDB = require("../../../exceptionsAndMiddlewares/exceptions/ErrorFromDB");
 
 const { removeProperties } = require("../../../utilities/general");
