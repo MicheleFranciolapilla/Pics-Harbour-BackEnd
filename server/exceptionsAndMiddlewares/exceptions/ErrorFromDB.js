@@ -1,9 +1,9 @@
 class ErrorFromDB extends Error
 {
-    constructor(message, errBlock)
+    constructor(message, statusCode, errBlock)
     {
         super(message);
-        this.status = 503;
+        this.status = statusCode;
         this.errorBlock = errBlock;
     }
 }
