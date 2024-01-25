@@ -6,7 +6,7 @@ const bcrypt = require("bcrypt");
 const ErrorEmailNotNew = require("../../../exceptionsAndMiddlewares/exceptions/ErrorEmailNotNew");
 const ErrorFromDB = require("../../../exceptionsAndMiddlewares/exceptions/ErrorFromDB");
 const ErrorResourceNotFound = require("../../../exceptionsAndMiddlewares/exceptions/ErrorResourceNotFound");
-const ErrorWrongData = require("../../../exceptionsAndMiddlewares/exceptions/ErrorWrongData");
+const ErrorInvalidData = require("../../../exceptionsAndMiddlewares/exceptions/ErrorInvalidData");
 
 const { removeProperties } = require("../../../utilities/general");
 const { formattedOutput } = require("../../../utilities/consoleOutput");
@@ -84,7 +84,7 @@ async function logIn(req, res, next)
         // Se l'email esiste si prosegue verificando la correttezza della password, confrontando, mediante il metodo bcrypt.compare, la password (plain) ricevuta dal client con la password criptata ricavata dal db
         const checkPsw = await bcrypt.compare(password, userToLog.password);
         if (!checkPsw)
-            return next(new ErrorWrongData("password", "AUTH - LOGIN - TRY"));
+            return next(new ErrorInvalidData("password", "AUTH - LOGIN - TRY"));
         // Se la password è corretta si prosegue con l'ottenimento del jwt
         removeProperties([userToLog], "password");
         const token = jwt.sign(userToLog, process.env.JWT_SECRET, { expiresIn : tokenLifeTime });
@@ -97,4 +97,34 @@ async function logIn(req, res, next)
     }
 }
 
-module.exports = { signUp, logIn }
+/**
+ * Verifica la validità del token
+ * @function
+ * @param {Object} req - Oggetto "express request"
+ * @param {Object} res - Oggetto "express response"
+ * @param {Function} next - Middleware "express next"
+ * @returns {Promise<{ token: String, payLoad: Object }>|Error} - Promise che si risolve con un oggetto le cui proprietà sono "token" (già ricevuto nella request) e "payLoad" (dati dello user già loggato, senza password) in caso di successo, o viene respinta con un errore in caso di fallimento.
+ */
+function checkToken(req, res, next)
+{
+    const { token } = req.body;
+    if (token)
+    {
+        try
+        {
+            const payLoad = jwt.verify(token, process.env.JWT_SECRET);
+            // Si procede senza la verifica del valore del payload poichè, in caso di esito negativo, il metodo "verify" lancia direttamente un'eccezione, gestita, poi, nel blocco catch
+            formattedOutput("AUTH - CHECKTOKEN - SUCCESS", "***** Status: 200", "***** Token: ", token, "***** PayLoad: ", payLoad);
+            return res.json({ token, payLoad });
+        }
+        catch(error)
+        {
+            const exceptionStr = (error.message == "jwt expired") ? "expired" : "wrong";
+            return next(new ErrorInvalidData(`token (${exceptionStr})`, "AUTH - CHECKTOKEN - CATCH"));
+        }
+    }
+    else
+        return next(new ErrorInvalidData("token (missing)", "AUTH - CHECKTOKEN - ELSE"));
+}
+
+module.exports = { signUp, logIn, checkToken }
