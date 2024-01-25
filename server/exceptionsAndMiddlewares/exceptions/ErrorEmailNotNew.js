@@ -1,11 +1,11 @@
-class ErrorFromDB extends Error
+class ErrorEmailNotNew extends Error
 {
     constructor(message, errBlock)
     {
         super(message);
-        this.status = 503;
+        this.status = 409;
         this.errorBlock = errBlock;
     }
 }
 
-module.exports = ErrorFromDB;
+module.exports = ErrorEmailNotNew;

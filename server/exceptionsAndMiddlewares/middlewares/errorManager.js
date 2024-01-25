@@ -1,8 +1,6 @@
-module.exports =    function (err, req, res, next) 
-                    {
-                        console.log("Error Manager...");
-                        sendResponse(err, res);
-                    };
+const { formattedOutput } = require("../../utilities/consoleOutput");
+
+module.exports =    (err, req, res, next) => sendResponse(err, res);
   
   /**
    * Per poter usare la stessa risposta anche nel middleware per le rotte non trovate
@@ -15,7 +13,7 @@ module.exports =    function (err, req, res, next)
 
   function sendResponse(err, res) 
   {
-    console.log("Method sendResponse invoked...");
+    formattedOutput(err.errorBlock ?? "DIRECT ERROR", `*** ${err.status ?? 500}`, `*** ${err.message}`, `*** ${err.constructor.name}`, err.errors ? `*** ${err.errors}` : "");
     return res.status(err.status ?? 500).json(  {
                                                     "message"   :   err.message,
                                                     "error"     :   err.constructor.name,

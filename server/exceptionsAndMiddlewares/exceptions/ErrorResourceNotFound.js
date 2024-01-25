@@ -1,10 +1,10 @@
 class ErrorResourceNotFound extends Error
 {
-    constructor(resource)
+    constructor(resource, errBlock)
     {
         super(`Error 404: ${resource} not found!`);
         this.status = 404;
-        console.log(`Error 404: ${resource} not found!`);
+        this.errorBlock = errBlock;
     }
 }
 
