@@ -1,14 +1,21 @@
 const { formattedOutput } = require("../../utilities/consoleOutput");
 
+/**
+ * Middleware per intercettazione errori. Invoca la funzione "sendResponse" per inviare la response http
+ * @param {Error} err - Oggetto di classe Error o classe derivata
+ * @param {Express.Request} req - Oggetto express request
+ * @param {Express.Response} res - Oggetto express response
+ * @param {Express.Next} next - Middleware express next
+ * @returns {void}
+ */
 module.exports =    (err, req, res, next) => sendResponse(err, res);
   
   /**
-   * Per poter usare la stessa risposta anche nel middleware per le rotte non trovate
-   * esporto questa funzione in modo da poterla riutilizzare
-   * 
-   * @param {*} err 
-   * @param {*} res 
-   * @returns 
+   * Funzione incaricata di inviare la response http in conseguenza del lancio di qualsiasi tipo di errore e di generare il corrispondente blocco informativo nella console del server.
+   * @function
+   * @param {Error} err - Oggetto di classe Error o classe derivata
+   * @param {Express.Response} res - Oggetto express response 
+   * @returns {Express.Response} - Restituisce la response formattata coerentemente al tipo di eccezione lanciata. La proprietà "details" fa riferimento ad eventuali errori di validazione settati da express Validator
    */
 
   function sendResponse(err, res) 
