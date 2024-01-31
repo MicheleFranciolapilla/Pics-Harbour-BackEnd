@@ -11,7 +11,7 @@ const users = require("../controllers/usersController");
 const auth = require("../controllers/authController");
 
 router.get("/", users.index);
-router.get("/:id", users.show);
+router.get("/:id", validationMiddleware(returnSchemaForIdLikeParams("id", "params")), users.show);
 router.delete("/:id", validationMiddleware(returnSchemaForIdLikeParams("id", "params")), authorizationMiddleware, users.destroy);
 // Rotte users connesse a registrazione utente ed autenticazione
 router.post("/signup", validationMiddleware(schemaForSignUp), auth.signUp);

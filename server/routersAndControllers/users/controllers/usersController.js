@@ -36,7 +36,30 @@ async function index(req, res, next)
 
 async function show(req, res, next)
 {
-
+    const { id } = matchedData(req, { onlyValidData : true });
+    try
+    {
+        const userToShow = await prisma.user.findUnique(
+            {
+                "where"     : 
+                                { 
+                                    "id"            :   id 
+                                },
+                "include"   :   {
+                                    "pictures"      :   true,
+                                    "categories"    :   true
+                                }  
+            });
+        if (!userToShow)
+            return next(new ErrorResourceNotFound("User", "USERS - SHOW - TRY"));
+        removeProperties([userToShow], "password");
+        formattedOutput("USERS - SHOW USER - SUCCESS", "***** Status: 200", "***** User: ", userToShow);
+        return res.json({ userToShow });
+    }
+    catch(error)
+    {
+        return next(new ErrorFromDB("Service temporarily unavailable", 503, "USERS - SHOW - CATCH"));
+    }
 }
 
 async function destroy(req, res, next)
@@ -88,7 +111,7 @@ async function destroy(req, res, next)
                 if (!otherSuperAdmin)
                     return next(new ErrorOperationRefused("The operation cannot be performed. Cannot delete the unique Super Admin", "USERS - DESTROY - TRY (otherSuperAdmin)"));
                 // -B-
-                
+
             }
             catch(errorOnOtherSuperAdminQuery)
             {
