@@ -9,7 +9,4 @@ const { sendResponse } = require("./errorManager");
  * @param {Function} next - Middleware "express next"
  * @throws {ErrorResourceNotFound} - Lancia un'eccezione del tipo "risorsa (rotta) non trovata"
  */
-module.exports =    function(req, res, next)
-                    {
-                        sendResponse(new ErrorResourceNotFound("Route", "ROUTE - MIDDLEWARE404"), res);
-                    }
+module.exports = (req, res, next) => sendResponse(new ErrorResourceNotFound("Route", "ROUTE - MIDDLEWARE404"), res);

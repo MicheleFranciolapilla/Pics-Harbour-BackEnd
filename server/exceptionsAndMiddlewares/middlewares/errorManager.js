@@ -9,7 +9,7 @@ const { formattedOutput } = require("../../utilities/consoleOutput");
  * @param {Express.Next} next - Middleware express next
  * @returns {void}
  */
-module.exports =    (err, req, res, next) => sendResponse(err, res);
+module.exports = (err, req, res, next) => sendResponse(err, res);
   
   /**
    * Funzione incaricata di inviare la response http in conseguenza del lancio di qualsiasi tipo di errore e di generare il corrispondente blocco informativo nella console del server.

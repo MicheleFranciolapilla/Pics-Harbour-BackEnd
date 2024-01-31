@@ -12,20 +12,22 @@ datasource db {
 
 // Modello della tabella Users
 model User {
-  id        Int       @id @default(autoincrement())
-  name      String    @db.VarChar(20)
-  surname   String    @db.VarChar(30)
-  role      String    @db.VarChar(11) @default("Admin")
-  email     String    @db.VarChar(100) @unique
+  id          Int       @id @default(autoincrement())
+  name        String    @db.VarChar(20)
+  surname     String    @db.VarChar(30)
+  role        String    @db.VarChar(11) @default("Admin")
+  email       String    @db.VarChar(100) @unique
   // La lunghezza della password criptata è fissa e vale 60 caratteri (standard internazionale)
   // Specificamente BCrypt accetta password in input (da criptare) di lunghezza massima fissata a 72 caratteri (password più lunghe vengono troncate).
-  password  String    @db.VarChar(60)
+  password    String    @db.VarChar(60)
   // Una funzione ad hoc si occuperà di rinominare i files immagine movimentati da Multer in maniera univoca, utilizzando, nel nome, il getTime, unitamente a qualche carattere alfabetico randomico. Nello sviluppo dell'API in locale sarà sufficiente un solo carattere alfabetico ad inizio stringa, mentre in un'eventuale sviluppo online si potrebbero utilizzare più caratteri alfabetici randomici. Un size massimo impostato a 25 caratteri consente abbondantemente di rinominare il file univocamente, estensione inclusa.
-  thumb     String?   @db.VarChar(25)
+  thumb       String?   @db.VarChar(25)
   // Relazione ONE TO MANY con tabella Pictures
-  pictures  Picture[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  pictures    Picture[]
+  // Relazione ONE TO MANY con tabella Categories
+  categories  Category[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   
   @@map("Users")
 }
@@ -38,6 +40,10 @@ model Category {
   thumb     String?   @db.VarChar(25)
   // Relazione MANY TO MANY con tabella Pictures
   pictures  Picture[]
+  // Relazione MANY TO ONE con tabella Users
+  // userId è la Foreign Key
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id])
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   
@@ -53,7 +59,7 @@ model Picture {
   image       String      @db.VarChar(25)
   visible     Boolean     @default(false)
   // Relazione MANY TO ONE con tabella Users
-  // userId è la ForeignKey
+  // userId è la Foreign Key
   userId      Int
   user        User        @relation(fields: [userId], references: [id])
   // Relazione MANY TO MANY con tabella Categories

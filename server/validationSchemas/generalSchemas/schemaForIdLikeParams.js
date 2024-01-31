@@ -18,11 +18,12 @@
 const returnSchemaForIdLikeParams = (paramName, location) =>
     ({
         [paramName] :   {
-                            in      :   [location],
-                            isInt   :   {
-                                            options         :   { min : 1 },
-                                            errorMessage    :   `${paramName} is not valid: it must be integer, positive, not zero`
-                                        }
+                            in              :   [location],
+                            isInt           :   {
+                                                    options         :   { min : 1 },
+                                                    errorMessage    :   `${paramName} is not valid: it must be integer, positive, not zero`
+                                                },
+                            customSanitizer :   {   options         :   (value) => parseInt(value) }
                         }
     });
 

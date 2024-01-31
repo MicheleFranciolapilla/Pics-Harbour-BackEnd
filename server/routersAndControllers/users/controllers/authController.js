@@ -76,7 +76,7 @@ async function signUp(req, res, next)
  */
 async function logIn(req, res, next)
 {
-    const { email, password } = req.body;
+    const { email, password } = matchedData(req, { onlyValidData : true });
     try
     {
         const userToLog = await prisma.user.findUnique({ "where" : { "email" : email } });
