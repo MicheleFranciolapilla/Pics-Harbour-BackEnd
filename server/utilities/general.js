@@ -14,4 +14,30 @@ function removeProperties(objectsArray, ...propertiesList)
     return objectsArray;
 }
 
-module.exports = { removeProperties }
+/**
+ * Sostituisce tutti i raggruppamenti di spazi con spazi singoli.
+ * La regular expression "/ +/g" equivale a "tutti gli spazi, anche multipli (+), globalmente (g)"
+ * @param {string} stringToNormalize - Stringa da normalizzare
+ * @returns {string} - Stringa normalizzata
+ */
+const normalizeSpaces = (stringToNormalize) => stringToNormalize.replace(/ +/g, " ");
+
+/**
+ * Restituisce l'intera stringa in lowercase, con la prima lettera della prima parola in uppercase. Se "allFirstChars" è true, anche le altre parole della stringa avranno il primo carattere in uppercase.
+ * N.B. La stringa in ingresso deve essere NORMALIZZATA, ovvero, laddove formata da più parole, con un solo spazio a dividerle
+ * @function
+ * @param {string} normalizedStringOfWords 
+ * @param {boolean} allFirstChars 
+ * @returns {string}
+ */
+function upperStartingChar(normalizedStringOfWords, allFirstChars)
+{
+    if ((normalizedStringOfWords === "") || (normalizedStringOfWords === " "))
+        return normalizedStringOfWords;
+    let wordsArray = normalizedStringOfWords.toLowerCase().split(" ");
+    wordsArray[0] = wordsArray[0][0].toUpperCase() + wordsArray[0].slice(1);
+    allFirstChars && (wordsArray = wordsArray.map( word => word[0].toUpperCase() + word.slice(1)));
+    return wordsArray.join(" ");
+}
+
+module.exports = { removeProperties, normalizeSpaces, upperStartingChar }

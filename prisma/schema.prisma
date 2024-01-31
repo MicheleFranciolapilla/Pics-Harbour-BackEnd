@@ -16,7 +16,7 @@ model User {
   name      String    @db.VarChar(20)
   surname   String    @db.VarChar(30)
   role      String    @db.VarChar(11) @default("Admin")
-  email     String    @db.VarChar(50) @unique
+  email     String    @db.VarChar(100) @unique
   // La lunghezza della password criptata è fissa e vale 60 caratteri (standard internazionale)
   // Specificamente BCrypt accetta password in input (da criptare) di lunghezza massima fissata a 72 caratteri (password più lunghe vengono troncate).
   password  String    @db.VarChar(60)

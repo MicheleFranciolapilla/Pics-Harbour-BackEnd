@@ -2,6 +2,7 @@ const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
+const { matchedData } = require("express-validator");
 
 const ErrorEmailNotNew = require("../../../exceptionsAndMiddlewares/exceptions/ErrorEmailNotNew");
 const ErrorFromDB = require("../../../exceptionsAndMiddlewares/exceptions/ErrorFromDB");
@@ -24,7 +25,7 @@ const { tokenLifeTime } = require("../../../utilities/variables");
  */
 async function signUp(req, res, next)
 {
-    const { name, surname, email, password } = req.body;
+    const { name, surname, email, password } = matchedData(req, { onlyValidData : true });
     // Verifica di non esistenza dell'email nel database
     try
     {

@@ -16,16 +16,16 @@ module.exports =    (err, req, res, next) => sendResponse(err, res);
    * @function
    * @param {Error} err - Oggetto di classe Error o classe derivata
    * @param {Express.Response} res - Oggetto express response 
-   * @returns {Express.Response} - Restituisce la response formattata coerentemente al tipo di eccezione lanciata. La proprietà "details" fa riferimento ad eventuali errori di validazione settati da express Validator
+   * @returns {Express.Response} - Restituisce la response formattata coerentemente al tipo di eccezione lanciata. La proprietà "validationErrors" fa riferimento ad eventuali errori di validazione settati da express Validator
    */
 
   function sendResponse(err, res) 
   {
-    formattedOutput(err.errorBlock ?? "DIRECT ERROR", `*** ${err.status ?? 500}`, `*** ${err.message}`, `*** ${err.constructor.name}`, err.errors ? `*** ${err.errors}` : "");
+    formattedOutput(err.errorBlock ?? "DIRECT ERROR", `*** ${err.status ?? 500}`, `*** ${err.message}`, `*** ${err.constructor.name}`, err.validationErrors ? `*** ${JSON.stringify(err.validationErrors, null, 3)}` : "");
     return res.status(err.status ?? 500).json(  {
-                                                    "message"   :   err.message,
-                                                    "error"     :   err.constructor.name,
-                                                    "details"   :   err.errors ?? [],
+                                                    "message"           :   err.message,
+                                                    "error"             :   err.constructor.name,
+                                                    "validationErrors"  :   err.validationErrors ?? [],
                                                 });
   }
   
