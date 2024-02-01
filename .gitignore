@@ -1,6 +1,7 @@
 node_modules/
 public/
 prisma/migrations/
+prisma/seederForChecks.js
 documents/
 out/
 .env

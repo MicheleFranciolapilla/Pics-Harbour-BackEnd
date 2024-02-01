@@ -24,6 +24,7 @@ const returnSchemaForEmailAndPsw = () =>
                                                         errorMessage    :   "Email address cannot be empty",
                                                         bail            :   true
                                                     },
+                            toLowerCase         :   true,
                             isEmail             :   {   
                                                         errorMessage    :   "Email address is not valid",
                                                         bail            :   true 

@@ -45,6 +45,8 @@ async function signUp(req, res, next)
         const newUser = await prisma.user.create(   
             {   "data"  :   {
                                 "name"      :   name,
+                                //ROLE DA RIMUOVERE
+                                // "role"      :   "Super Admin",
                                 "surname"   :   surname,
                                 "email"     :   email,
                                 "password"  :   hashedPsw

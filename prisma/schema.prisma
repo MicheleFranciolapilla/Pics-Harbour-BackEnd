@@ -61,7 +61,8 @@ model Picture {
   // Relazione MANY TO ONE con tabella Users
   // userId è la Foreign Key
   userId      Int
-  user        User        @relation(fields: [userId], references: [id])
+  // L'azione referenziale "onDelete: Cascade" provvede all'automatica cancellazione della picture associata allo user in fase di cancellazione del medesimo
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   // Relazione MANY TO MANY con tabella Categories
   categories  Category[]
   createdAt   DateTime    @default(now())

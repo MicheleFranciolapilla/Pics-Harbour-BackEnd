@@ -87,7 +87,7 @@ async function destroy(req, res, next)
                                     "categories"    :   true
                                 }  
             });
-        console.log(userToDelete);
+        console.log("TO DELETE: ",userToDelete);
         if (!userToDelete)
             return next(new ErrorResourceNotFound("User", "USERS - DESTROY - TRY"));
         // -A-
@@ -101,17 +101,23 @@ async function destroy(req, res, next)
                         "where"     :   {
                                             "NOT"           :   {
                                                                     "id"    :   id
-                                                                }
+                                                                },
+                                            "role"          :   "Super Admin"
                                         },
                         "include"   :   {
                                             "pictures"      :   true,
                                             "categories"    :   true
                                         }   
                     });
+                console.log("OTHER: ", otherSuperAdmin);
                 if (!otherSuperAdmin)
                     return next(new ErrorOperationRefused("The operation cannot be performed. Cannot delete the unique Super Admin", "USERS - DESTROY - TRY (otherSuperAdmin)"));
                 // -B-
-
+                // await prisma.user.update(
+                //     {
+                //         "where":{"id":id},
+                //         "data":{pictures:{"delete":true}}
+                //     });
             }
             catch(errorOnOtherSuperAdminQuery)
             {

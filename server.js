@@ -27,6 +27,8 @@ server.use(express.urlencoded({ extended : true }));
 // Public routes
 server.get("/", home);
 server.use("/users", usersRouter);
+// Private routes
+
 // Middlewares errori
 server.use(route404);
 server.use(errorManager);
