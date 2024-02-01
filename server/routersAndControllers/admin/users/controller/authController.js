@@ -9,7 +9,7 @@ const ErrorFromDB = require("../../../../exceptionsAndMiddlewares/exceptions/Err
 const ErrorResourceNotFound = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorResourceNotFound");
 const ErrorInvalidData = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorInvalidData");
 
-const { removeProperties } = require("../../../../utilities/general");
+const { prismaOperator, removeProperties } = require("../../../../utilities/general");
 const { formattedOutput } = require("../../../../utilities/consoleOutput");
 const { tokenLifeTime } = require("../../../../utilities/variables");
 
@@ -21,49 +21,41 @@ const { tokenLifeTime } = require("../../../../utilities/variables");
  * @param {Object} req - Oggetto "express request"
  * @param {Object} res - Oggetto "express response"
  * @param {Function} next - Middleware "express next"
- * @returns {Promise<{ newUser: Object, token: string }>|Error} - Promise che si risolve con un oggetto le cui proprietà sono "newUser" (senza la proprietà password) e "token" (JWT con durata stabilita, generato al netto della password) in caso di successo, o viene respinta con un errore in caso di fallimento.
+ * @returns {Promise<{ user: Object, token: string }>|Error} - Promise che si risolve con un oggetto le cui proprietà sono "user" (senza la proprietà password) e "token" (JWT con durata stabilita, generato al netto della password) in caso di successo, o viene respinta con un errore in caso di fallimento.
  */
 async function signUp(req, res, next)
 {
     const { name, surname, email, password } = matchedData(req, { onlyValidData : true });
     // Verifica di non esistenza dell'email nel database
-    try
-    {
-        // Si predilige il metodo findUnique a count poichè più rapido in caso di esistenza
-        const checkingEmailExistence = await prisma.user.findUnique({ "where" : { "email" : email } });
-        if (checkingEmailExistence)
-            return next(new ErrorEmailNotNew("Invalid email - already in use!", "AUTH - SIGNUP - TRY"));
-    }
-    catch(error)
-    {
-        return next(new ErrorFromDB("Service temporarily unavailable", 503, "AUTH - SIGNUP - CATCH")); 
-    }
-    // Prosecuzione del blocco "try"
+    // Si predilige il metodo findUnique a count poichè più rapido in caso di esistenza
+    let prismaQuery = { "where" : { "email" : email } };
+    const checkEmailExistence = await prismaOperator(prisma, "user", "findUnique", prismaQuery);
+    // Caso in cui sia stato lanciato un errore:
+    if (!checkEmailExistence.success)
+        return next(new ErrorFromDB("Service temporarily unavailable", 503, "AUTH - SIGNUP"));
+    // Caso in cui l'email sia già presente nel database
+    else if (checkEmailExistence.data)
+        return next(new ErrorEmailNotNew("Invalid email - already in use!", "AUTH - SIGNUP"));
+    // Si prosegue se l'email non è già presente nel db
     const hashedPsw = await bcrypt.hash(password, parseInt(process.env.BCRYPT_SALT_ROUNDS));
-    try
-    {
-        const newUser = await prisma.user.create(   
-            {   "data"  :   {
-                                "name"      :   name,
-                                //ROLE DA RIMUOVERE
-                                "role"      :   "Super Admin",
-                                "surname"   :   surname,
-                                "email"     :   email,
-                                "password"  :   hashedPsw
-                            }
-            });
-        if (!newUser)
-            return next(new ErrorFromDB("Operation refused", 403, "AUTH - SIGNUP - TRY"));
-        // Se l'operazione va a buon fine si restituisce il record salvato (senza password) ed il token jwt
-        removeProperties([newUser], "password");
-        const token = jwt.sign(newUser, process.env.JWT_SECRET, { expiresIn : tokenLifeTime });
-        formattedOutput("AUTH - SIGNUP - SUCCESS", "***** Status: 201", "***** New User: ", newUser, "***** Token: ", token);
-        return res.status(201).json({ newUser, token });
-    }
-    catch(error)
-    {
-        return next(new ErrorFromDB("Operation refused", 403, "AUTH - SIGNUP - CATCH"));
-    }
+    prismaQuery =   {
+                        "data"  :   {
+                                        "name"      :   name,
+                                        "surname"   :   surname,
+                                        "email"     :   email,
+                                        "password"  :   hashedPsw
+                                    }
+                    };
+    const newUser = await prismaOperator(prisma, "user", "create", prismaQuery);
+    // Si è scelto di unificare l'errore "Operation refused" anche per l'errore da catch ("Service temporarily unavailable") nell'ipotesi, non testata, di insufficiente spazio nel db
+    if ((!newUser.success) || (!newUser.data))
+        return next(new ErrorFromDB("Operation refused", 403, "AUTH - SIGNUP"));
+    // Se l'operazione va a buon fine si restituisce il record salvato (senza password) ed il token jwt
+    const user = newUser.data;
+    removeProperties([user], "password");
+    const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn : tokenLifeTime });
+    formattedOutput("AUTH - SIGNUP - SUCCESS", "***** Status: 201", "***** New User: ", user, "***** Token: ", token);
+    return res.status(201).json({ user, token });
 }
 
 /**
@@ -74,30 +66,26 @@ async function signUp(req, res, next)
  * @param {Object} req - Oggetto "express request"
  * @param {Object} res - Oggetto "express response"
  * @param {Function} next - Middleware "express next"
- * @returns {Promise<{ userToLog: Object, token: string }>|Error} - Promise che si risolve con un oggetto le cui proprietà sono "userToLog" (senza la proprietà password) e "token" (JWT con durata stabilita, generato al netto della password) in caso di successo, o viene respinta con un errore in caso di fallimento.
+ * @returns {Promise<{ user: Object, token: string }>|Error} - Promise che si risolve con un oggetto le cui proprietà sono "user" (senza la proprietà password) e "token" (JWT con durata stabilita, generato al netto della password) in caso di successo, o viene respinta con un errore in caso di fallimento.
  */
 async function logIn(req, res, next)
 {
     const { email, password } = matchedData(req, { onlyValidData : true });
-    try
-    {
-        const userToLog = await prisma.user.findUnique({ "where" : { "email" : email } });
-        if (!userToLog)
-            return next(new ErrorResourceNotFound("Email", "AUTH - LOGIN - TRY"));
-        // Se l'email esiste si prosegue verificando la correttezza della password, confrontando, mediante il metodo bcrypt.compare, la password (plain) ricevuta dal client con la password criptata ricavata dal db
-        const checkPsw = await bcrypt.compare(password, userToLog.password);
-        if (!checkPsw)
-            return next(new ErrorInvalidData("password", "AUTH - LOGIN - TRY"));
-        // Se la password è corretta si prosegue con l'ottenimento del jwt
-        removeProperties([userToLog], "password");
-        const token = jwt.sign(userToLog, process.env.JWT_SECRET, { expiresIn : tokenLifeTime });
-        formattedOutput("AUTH - LOGIN - SUCCESS", "***** Status: 200", "***** Logged user: ", userToLog, "***** Token: ", token);
-        return res.json({ userToLog, token });
-    }
-    catch(error)
-    {
-        return next(new ErrorFromDB("Service temporarily unavailable", 503, "AUTH - LOGIN - CATCH"));
-    }
+    const userToLog = await prismaOperator(prisma, "user", "findUnique", { "where" : { "email" : email } });
+    if (!userToLog.success)
+        return next(new ErrorFromDB("Service temporarily unavailable", 503, "AUTH - LOGIN"));
+    else if (!userToLog.data)
+        return next(new ErrorResourceNotFound("Email", "AUTH - LOGIN"));
+    // Se l'email esiste si prosegue verificando la correttezza della password, confrontando, mediante il metodo bcrypt.compare, la password (plain) ricevuta dal client con la password criptata ricavata dal db
+    const checkPsw = await bcrypt.compare(password, userToLog.data.password);
+    if (!checkPsw)
+        return next(new ErrorInvalidData("password", "AUTH - LOGIN"));
+    // Se la password è corretta si prosegue con l'ottenimento del jwt
+    const user = userToLog.data;
+    removeProperties([user], "password");
+    const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn : tokenLifeTime });
+    formattedOutput("AUTH - LOGIN - SUCCESS", "***** Status: 200", "***** Logged user: ", user, "***** Token: ", token);
+    return res.json({ user, token });
 }
 
 /**
@@ -123,11 +111,11 @@ function checkToken(req, res, next)
         catch(error)
         {
             const exceptionStr = (error.message == "jwt expired") ? "expired" : "wrong";
-            return next(new ErrorInvalidData(`token (${exceptionStr})`, "AUTH - CHECKTOKEN - CATCH"));
+            return next(new ErrorInvalidData(`token (${exceptionStr})`, "AUTH - CHECKTOKEN"));
         }
     }
     else
-        return next(new ErrorInvalidData("token (missing)", "AUTH - CHECKTOKEN - ELSE"));
+        return next(new ErrorInvalidData("token (missing)", "AUTH - CHECKTOKEN"));
 }
 
 module.exports = { signUp, logIn, checkToken }

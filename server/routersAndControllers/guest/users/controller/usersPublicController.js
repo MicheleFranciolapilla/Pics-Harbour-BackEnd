@@ -5,7 +5,7 @@ const { matchedData } = require("express-validator");
 const ErrorFromDB = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorFromDB");
 const ErrorResourceNotFound = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorResourceNotFound");
 
-const { removeProperties } = require("../../../../utilities/general");
+const { prismaOperator, removeProperties } = require("../../../../utilities/general");
 const { formattedOutput } = require("../../../../utilities/consoleOutput");
 
 /**
@@ -19,45 +19,43 @@ const { formattedOutput } = require("../../../../utilities/consoleOutput");
  */
 async function index(req, res, next)
 {
-    try
-    {
-        const users = await prisma.user.findMany();
-        removeProperties(users, "password");
-        formattedOutput("USERS (PUBLIC) - ALLUSERS - SUCCESS", "***** Status: 200", "***** Users: ", users);
-        return res.json({ users });
-    }
-    catch(error) 
-    { 
-        return next(new ErrorFromDB("Service temporarily unavailable", 503, "USERS (PUBLIC) - INDEX - CATCH")); 
-    }
+    const allUsers = await prismaOperator(prisma, "user", "findMany", {});
+    if (!allUsers.success)
+        return next(new ErrorFromDB("Service temporarily unavailable", 503, "USERS (PUBLIC) - INDEX")); 
+    const users = allUsers.data;
+    removeProperties(users, "password");
+    formattedOutput("USERS (PUBLIC) - ALLUSERS - SUCCESS", "***** Status: 200", "***** Users: ", users);
+    return res.json({ users });
 }
 
+/**
+* Restituisce l'utente (Admin o Super Admin) con l'id richiesto
+* @function
+* @async
+* @param {Object} req - Oggetto "express request"
+* @param {Object} res - Oggetto "express response"
+* @param {Function} next - Middleware "express next"
+* @returns {Promise<Object|Error>} - Promise che si risolve con i dati (senza password) dello user cercato o con un errore
+*/
 async function show(req, res, next)
 {
     const { id } = matchedData(req, { onlyValidData : true });
-    try
-    {
-        const userToShow = await prisma.user.findUnique(
-            {
-                "where"     : 
-                                { 
-                                    "id"            :   id 
-                                },
-                "include"   :   {
-                                    "pictures"      :   true,
-                                    "categories"    :   true
-                                }  
-            });
-        if (!userToShow)
-            return next(new ErrorResourceNotFound("User", "USERS (PUBLIC) - SHOW - TRY"));
-        removeProperties([userToShow], "password");
-        formattedOutput("USERS (PUBLIC) - SHOW USER - SUCCESS", "***** Status: 200", "***** User: ", userToShow);
-        return res.json({ userToShow });
-    }
-    catch(error)
-    {
-        return next(new ErrorFromDB("Service temporarily unavailable", 503, "USERS (PUBLIC) - SHOW - CATCH"));
-    }
+    const prismaQuery = {
+                            "where"     :   {   "id"            :   id },
+                            "include"   :   {
+                                                "pictures"      :   true,
+                                                "categories"    :   true
+                                            }  
+                        };
+    const userToShow = await prismaOperator(prisma, "user", "findUnique", prismaQuery);
+    if (!userToShow.success)
+        return next(new ErrorFromDB("Service temporarily unavailable", 503, "USERS (PUBLIC) - SHOW"));
+    else if (!userToShow.data)
+        return next(new ErrorResourceNotFound("User", "USERS (PUBLIC) - SHOW"));
+    const user = userToShow.data;
+    removeProperties([user], "password");
+    formattedOutput("USERS (PUBLIC) - SHOW USER - SUCCESS", "***** Status: 200", "***** User: ", user);
+    return res.json({ user });
 }
 
 module.exports = { index, show };
