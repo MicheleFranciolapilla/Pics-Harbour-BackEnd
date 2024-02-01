@@ -4,8 +4,11 @@ const cors = require("cors");
 const express = require("express");
 
 // Importazione routers & controllers
-const home = require("./server/routersAndControllers/guest/controllers/homeController");
-const usersRouter = require("./server/routersAndControllers/users/routers/usersRouter");
+// Parte pubblica
+const home = require("./server/routersAndControllers/guest/home/controller/homeController");
+const usersPublicRoutes = require("./server/routersAndControllers/guest/users/routes/usersPublicRoutes");
+// Parte Privata
+const usersPrivateRoutes = require("./server/routersAndControllers/admin/users/routes/usersPrivateRoutes");
 
 // Importazione middlewares
 const errorManager = require("./server/exceptionsAndMiddlewares/middlewares/errorManager");
@@ -24,10 +27,11 @@ server.use(cors(
 // body parsers
 server.use(express.json());
 server.use(express.urlencoded({ extended : true }));
-// Public routes
+// Rotte pubbliche
 server.get("/", home);
-server.use("/users", usersRouter);
-// Private routes
+server.use("/users", usersPublicRoutes);
+// Rotte private
+server.use("/users", usersPrivateRoutes);
 
 // Middlewares errori
 server.use(route404);

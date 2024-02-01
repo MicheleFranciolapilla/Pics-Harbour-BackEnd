@@ -4,14 +4,14 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const { matchedData } = require("express-validator");
 
-const ErrorEmailNotNew = require("../../../exceptionsAndMiddlewares/exceptions/ErrorEmailNotNew");
-const ErrorFromDB = require("../../../exceptionsAndMiddlewares/exceptions/ErrorFromDB");
-const ErrorResourceNotFound = require("../../../exceptionsAndMiddlewares/exceptions/ErrorResourceNotFound");
-const ErrorInvalidData = require("../../../exceptionsAndMiddlewares/exceptions/ErrorInvalidData");
+const ErrorEmailNotNew = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorEmailNotNew");
+const ErrorFromDB = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorFromDB");
+const ErrorResourceNotFound = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorResourceNotFound");
+const ErrorInvalidData = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorInvalidData");
 
-const { removeProperties } = require("../../../utilities/general");
-const { formattedOutput } = require("../../../utilities/consoleOutput");
-const { tokenLifeTime } = require("../../../utilities/variables");
+const { removeProperties } = require("../../../../utilities/general");
+const { formattedOutput } = require("../../../../utilities/consoleOutput");
+const { tokenLifeTime } = require("../../../../utilities/variables");
 
 /**
  * Consente la registrazione di un nuovo utente (Admin). Nel caso di esito positivo effettua il logIn dello stesso.
@@ -46,7 +46,7 @@ async function signUp(req, res, next)
             {   "data"  :   {
                                 "name"      :   name,
                                 //ROLE DA RIMUOVERE
-                                // "role"      :   "Super Admin",
+                                "role"      :   "Super Admin",
                                 "surname"   :   surname,
                                 "email"     :   email,
                                 "password"  :   hashedPsw

@@ -2,72 +2,17 @@ const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const { matchedData } = require("express-validator");
 
-const ErrorFromDB = require("../../../exceptionsAndMiddlewares/exceptions/ErrorFromDB");
-const ErrorUserNotAllowed = require("../../../exceptionsAndMiddlewares/exceptions/ErrorUserNotAllowed");
-const ErrorResourceNotFound = require("../../../exceptionsAndMiddlewares/exceptions/ErrorResourceNotFound");
-const ErrorOperationRefused = require("../../../exceptionsAndMiddlewares/exceptions/ErrorOperationRefused");
-
-const { removeProperties } = require("../../../utilities/general");
-const { formattedOutput } = require("../../../utilities/consoleOutput");
-
-/**
- * Restituisce la lista degli utenti registrati (Admin, Super Admin) nel database
- * @function
- * @async
- * @param {Object} req - Oggetto "express request"
- * @param {Object} res - Oggetto "express response"
- * @param {Function} next - Middleware "express next"
- * @returns {Promise<Array<Object>|Error>} - Promise che si risolve con un array "users" di oggetti "user" (senza la proprietà password) in caso di successo, o viene respinta con un errore in caso di fallimento.
- */
-async function index(req, res, next)
-{
-    try
-    {
-        const users = await prisma.user.findMany();
-        removeProperties(users, "password");
-        formattedOutput("USERS - ALLUSERS - SUCCESS", "***** Status: 200", "***** Users: ", users);
-        return res.json({ users });
-    }
-    catch(error) 
-    { 
-        return next(new ErrorFromDB("Service temporarily unavailable", 503, "USERS - INDEX - CATCH")); 
-    }
-}
-
-async function show(req, res, next)
-{
-    const { id } = matchedData(req, { onlyValidData : true });
-    try
-    {
-        const userToShow = await prisma.user.findUnique(
-            {
-                "where"     : 
-                                { 
-                                    "id"            :   id 
-                                },
-                "include"   :   {
-                                    "pictures"      :   true,
-                                    "categories"    :   true
-                                }  
-            });
-        if (!userToShow)
-            return next(new ErrorResourceNotFound("User", "USERS - SHOW - TRY"));
-        removeProperties([userToShow], "password");
-        formattedOutput("USERS - SHOW USER - SUCCESS", "***** Status: 200", "***** User: ", userToShow);
-        return res.json({ userToShow });
-    }
-    catch(error)
-    {
-        return next(new ErrorFromDB("Service temporarily unavailable", 503, "USERS - SHOW - CATCH"));
-    }
-}
+const ErrorFromDB = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorFromDB");
+const ErrorUserNotAllowed = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorUserNotAllowed");
+const ErrorResourceNotFound = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorResourceNotFound");
+const ErrorOperationRefused = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorOperationRefused");
 
 async function destroy(req, res, next)
 {
     const { id } = matchedData(req, { onlyValidData : true });
     // Dopo aver recuperato l'id (validato) dell'utente che si desidera cancellare, per prima cosa si procede verificando che l'id del richiedente coincida, poichè la cancellazione di un utente è permessa solo all'utente interessato, neanche il Super Admin può cancellare alcun utente diverso da sè stesso
     if (id != req.tokenOwner.id)
-        return next(new ErrorUserNotAllowed("User not allowed to delete another user.", "USERS - DESTROY"));
+        return next(new ErrorUserNotAllowed("User not allowed to delete another user.", "USERS (PRIVATE) - DESTROY"));
     // Una volta accertato che l'utente intende cancellare sè stesso dal database, si procede con l'operazione
     // Bisognerà avere le seguenti accortezze:
     // -A- Se ad essere cancellato è un Super Admin, bisognerà autorizzare l'operazione solo se egli non è l'unico Super Admin presente
@@ -89,7 +34,7 @@ async function destroy(req, res, next)
             });
         console.log("TO DELETE: ",userToDelete);
         if (!userToDelete)
-            return next(new ErrorResourceNotFound("User", "USERS - DESTROY - TRY"));
+            return next(new ErrorResourceNotFound("User", "USERS (PRIVATE) - DESTROY - TRY"));
         // -A-
         if (req.tokenOwner.role == "Super Admin")
         {
@@ -111,7 +56,7 @@ async function destroy(req, res, next)
                     });
                 console.log("OTHER: ", otherSuperAdmin);
                 if (!otherSuperAdmin)
-                    return next(new ErrorOperationRefused("The operation cannot be performed. Cannot delete the unique Super Admin", "USERS - DESTROY - TRY (otherSuperAdmin)"));
+                    return next(new ErrorOperationRefused("The operation cannot be performed. Cannot delete the unique Super Admin", "USERS (PRIVATE) - DESTROY - TRY (otherSuperAdmin)"));
                 // -B-
                 // await prisma.user.update(
                 //     {
@@ -121,7 +66,7 @@ async function destroy(req, res, next)
             }
             catch(errorOnOtherSuperAdminQuery)
             {
-                return next(new ErrorFromDB("Service temporarily unavailable", 503, "USERS - DESTROY - CATCH (otherSuperAdmin)"));
+                return next(new ErrorFromDB("Service temporarily unavailable", 503, "USERS (PRIVATE) - DESTROY - CATCH (otherSuperAdmin)"));
             }
         }
         else
@@ -131,8 +76,8 @@ async function destroy(req, res, next)
     }
     catch(error)
     {
-        return next(new ErrorFromDB("Service temporarily unavailable", 503, "USERS - DESTROY - CATCH (userToDelete)"));
+        return next(new ErrorFromDB("Service temporarily unavailable", 503, "USERS (PRIVATE) - DESTROY - CATCH (userToDelete)"));
     }
 }
 
-module.exports = { index, show, destroy };
+module.exports = { destroy };
