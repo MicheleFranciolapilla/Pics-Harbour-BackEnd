@@ -9,17 +9,20 @@ const routesImagesParams =  {
                                 "users"         :   {
                                                         "folder"    :   "usersThumbs",
                                                         "validExt"  :   ['jpg', 'jpeg', 'png'],
-                                                        "maxSize"   :   0.5
+                                                        "maxSize"   :   0.5,
+                                                        "fieldName" :   "thumb"
                                                     },   
                                 "categories"    :   {
                                                         "folder"    :   "categoriesThumbs",
                                                         "validExt"  :   ['jpg', 'jpeg'],
-                                                        "maxSize"   :   0.1
+                                                        "maxSize"   :   0.1,
+                                                        "fieldName" :   "thumb"
                                                     },
                                 "pictures"      :   {
                                                         "folder"    :   "pictures",
                                                         "validExt"  :   ['jpg', 'jpeg', 'png', 'webp'],
-                                                        "maxSize"   :   5
+                                                        "maxSize"   :   5,
+                                                        "fieldName" :   "image"
                                                     }
                             };
 
@@ -38,4 +41,7 @@ function randomFileName(routeLabel)
     return routeLabel[0].toUpperCase().concat(Date.now(), finalChars.join(""));
 }
 
-module.exports = { routesImagesParams, randomFileName }
+const multerFileExtension = (file) => file.originalname.split(".").pop().toLowerCase();
+const multerFileType = (file) => file.mimetype.split("/")[0].toLowerCase();
+
+module.exports = { routesImagesParams, randomFileName, multerFileExtension, multerFileType }

@@ -2,7 +2,7 @@ const multer = require("multer");
 
 const ErrorUnsupportedFile = require("../exceptions/ErrorUnsupportedFile");
 
-const { routesImagesParams, randomFileName } = require("../../utilities/fileManagement");
+const { routesImagesParams, randomFileName, multerFileExtension, multerFileType } = require("../../utilities/fileManagement");
 
 /**
  * Arrow function che configura il middleware di multer utilizzato in fase di upload di immagini
@@ -13,8 +13,6 @@ const imageUploader = (routeLabel) =>
 {
     // Configurazione dello storage engine:
     const paramsObj = routesImagesParams[routeLabel];
-    const fileExtension = file.originalname.split(".").pop().toLowerCase();
-    const fileType = file.mimetype.split("/")[0].toLowerCase();
     /**
     * Configurazione specifica di nome e destinazione dei file caricati nel server 
     * @type {object}
@@ -27,14 +25,14 @@ const imageUploader = (routeLabel) =>
             * @param {Express.Multer.File} file - File caricato.
             * @param {Function} cb - CallBack function eseguita a fine operazione.
             */
-            destination :   (req, file, cb) => cb(null, `public/${paramsObj.folder}`),
+            destination :   (req, file, cb) => cb(null, `public/images/${paramsObj.folder}`),
             /**
             * Specifica il nome del file in upload.
             * @param {Express.Request} req - Request di express.
             * @param {Express.Multer.File} file - File caricato.
             * @param {Function} cb - CallBack function eseguita a fine operazione.
             */
-            filename    :   (req, file, cb) => cb(null, randomFileName(routeLabel).concat(".", fileExtension))
+            filename    :   (req, file, cb) => cb(null, randomFileName(routeLabel).concat(".", multerFileExtension(file)))
         });
         /**
    * Funzione incaricata di gestire la validazione del file, quanto a: estensione, tipo di file e dimensione.
@@ -43,14 +41,14 @@ const imageUploader = (routeLabel) =>
    * @param {Function} cb - CallBack function eseguita a fine operazione.
    */
     const fileFilter = (req, file, cb) =>
-        ((paramsObj.validExt.includes(fileExtension)) && (fileType === "image") && (file.size <= 1024*1024*paramsObj.maxSize))
+        ((paramsObj.validExt.includes(multerFileExtension(file))) && (multerFileType(file) === "image"))
         ? cb(null, true) 
-        : cb(new ErrorUnsupportedFile(`The file must be a '${paramsObj.validExt.join("/")}' image, max size: ${paramsObj.maxSize} MB.`, "IMAGE UPLOAD MIDDLEWARE"));
+        : cb(new ErrorUnsupportedFile(`The file must be a '${paramsObj.validExt.join("/")}' image.`, "IMAGE UPLOAD MIDDLEWARE"));
     return multer(
         {
             "storage"       :   storage,
             "fileFilter"    :   fileFilter
-        });
+        }).single(paramsObj.fieldName);
 }
 
-module.exports = { imageUploader }
+module.exports = { imageUploader };
