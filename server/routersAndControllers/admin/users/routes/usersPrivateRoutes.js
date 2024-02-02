@@ -7,13 +7,13 @@ const { returnSchemaForIdLikeParams } = require("../../../../validationSchemas/g
 const validationMiddleware = require("../../../../exceptionsAndMiddlewares/middlewares/validationMiddleware");
 const authorizationMiddleware = require("../../../../exceptionsAndMiddlewares/middlewares/authorizationMiddleware");
 
-const usersPrivateController = require("../controller/usersPrivateController");
-const authController = require("../controller/authController");
+const usersCtrl = require("../controller/usersPrivateController");
+const authCtrl = require("../controller/authController");
 
-router.delete("/:id", validationMiddleware(returnSchemaForIdLikeParams("id", "params")), authorizationMiddleware, usersPrivateController.destroy);
+router.delete("/:id", validationMiddleware(returnSchemaForIdLikeParams("id", "params")), authorizationMiddleware, usersCtrl.destroy);
 // Rotte users connesse a registrazione utente ed autenticazione
-router.post("/signup", validationMiddleware(schemaForSignUp), authController.signUp);
-router.post("/login", validationMiddleware(schemaForLogIn), authController.logIn);
-router.post("/checktoken", authController.checkToken);
+router.post("/signup", validationMiddleware(schemaForSignUp), authCtrl.signUp);
+router.post("/login", validationMiddleware(schemaForLogIn), authCtrl.logIn);
+router.post("/checktoken", authCtrl.checkToken);
 
 module.exports = router;

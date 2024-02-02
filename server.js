@@ -9,6 +9,7 @@ const home = require("./server/routersAndControllers/guest/home/controller/homeC
 const usersPublicRoutes = require("./server/routersAndControllers/guest/users/routes/usersPublicRoutes");
 // Parte Privata
 const usersPrivateRoutes = require("./server/routersAndControllers/admin/users/routes/usersPrivateRoutes");
+const picturesPrivateRoutes = require("./server/routersAndControllers/admin/pictures/routes/picturesPrivateRoutes");
 
 // Importazione middlewares
 const errorManager = require("./server/exceptionsAndMiddlewares/middlewares/errorManager");
@@ -24,7 +25,9 @@ server.use(cors(
                 methods         :       "GET, POST, PUT, DELETE",
                 credentials     :       true
         }));
-// body parsers
+// Middleware per file statici
+server.use(express.static("public"));
+// Body parsers
 server.use(express.json());
 server.use(express.urlencoded({ extended : true }));
 // Rotte pubbliche
@@ -32,6 +35,7 @@ server.get("/", home);
 server.use("/users", usersPublicRoutes);
 // Rotte private
 server.use("/users", usersPrivateRoutes);
+server.use("/pictures", picturesPrivateRoutes);
 
 // Middlewares errori
 server.use(route404);
