@@ -15,13 +15,21 @@
  * @param {string} location - Posizione del parametro (params, query, body)
  * @returns {Object} - Oggetto 'schema' di express validator utilizzabile dal metodo 'checkSchema'
  */
-const returnSchemaForIdLikeParams = (paramName, location) =>
+const returnSchemaForIdLikeParams = (paramName, location, isRequired) =>
     ({
         [paramName] :   {
                             in              :   [location],
+
+                            ...(isRequired
+                            ? {notEmpty     :   {
+                                                    errorMessage    :   `${paramName} is required`,
+                                                    bail            :   true 
+                                                }}
+                            : {optional     :   true}),
+                            
                             isInt           :   {
                                                     options         :   { min : 1 },
-                                                    errorMessage    :   `${paramName} is not valid: it must be integer, positive, not zero`
+                                                    errorMessage    :   `${paramName} is not valid: it must be integer, positive, not zero`,
                                                 },
                             customSanitizer :   {   options         :   (value) => parseInt(value) }
                         }

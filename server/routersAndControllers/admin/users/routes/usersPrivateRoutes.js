@@ -10,7 +10,7 @@ const authorizationMiddleware = require("../../../../exceptionsAndMiddlewares/mi
 const usersCtrl = require("../controller/usersPrivateController");
 const authCtrl = require("../controller/authController");
 
-router.delete("/:id", validationMiddleware(returnSchemaForIdLikeParams("id", "params")), authorizationMiddleware, usersCtrl.destroy);
+router.delete("/:id", validationMiddleware(returnSchemaForIdLikeParams("id", "params", true)), authorizationMiddleware, usersCtrl.destroy);
 // Rotte users connesse a registrazione utente ed autenticazione
 router.post("/signup", validationMiddleware(schemaForSignUp), authCtrl.signUp);
 router.post("/login", validationMiddleware(schemaForLogIn), authCtrl.logIn);

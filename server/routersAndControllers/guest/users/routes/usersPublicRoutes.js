@@ -7,6 +7,6 @@ const validationMiddleware = require("../../../../exceptionsAndMiddlewares/middl
 const usersCtrl = require("../controller/usersPublicController");
 
 router.get("/", usersCtrl.index);
-router.get("/:id", validationMiddleware(returnSchemaForIdLikeParams("id", "params")), usersCtrl.show);
+router.get("/:id", validationMiddleware(returnSchemaForIdLikeParams("id", "params", true)), usersCtrl.show);
 
 module.exports = router;
