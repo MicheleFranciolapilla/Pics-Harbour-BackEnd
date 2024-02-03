@@ -7,13 +7,13 @@
 */
 const routesImagesParams =  {
                                 "users"         :   {
-                                                        "folder"    :   "usersThumbs",
+                                                        "folder"    :   "users",
                                                         "validExt"  :   ['jpg', 'jpeg', 'png'],
                                                         "maxSize"   :   0.5,
                                                         "fieldName" :   "thumb"
                                                     },   
                                 "categories"    :   {
-                                                        "folder"    :   "categoriesThumbs",
+                                                        "folder"    :   "categories",
                                                         "validExt"  :   ['jpg', 'jpeg'],
                                                         "maxSize"   :   0.1,
                                                         "fieldName" :   "thumb"
@@ -41,7 +41,30 @@ function randomFileName(routeLabel)
     return routeLabel[0].toUpperCase().concat(Date.now(), finalChars.join(""));
 }
 
+/**
+ * Restituisce l'estensione del file caricato da multer
+ * @param {Object} file - Oggetto express.request.file
+ * @returns {string} - Estensione in lowercase
+ */
 const multerFileExtension = (file) => file.originalname.split(".").pop().toLowerCase();
+
+/**
+ * Resituisce il tipo di file caricato da multer, estrapolandolo dal mimetype
+ * @param {Object} file - Oggetto express.request.file 
+ * @returns {string} - Tipo del file (image o altro)
+ */
 const multerFileType = (file) => file.mimetype.split("/")[0].toLowerCase();
 
-module.exports = { routesImagesParams, randomFileName, multerFileExtension, multerFileType }
+/**
+ * Restituisce la stringa identificativa della rotta che ha prodotto l'upload del file
+ * @function
+ * @param {Object} file - Oggetto express.request.file
+ * @returns {string} - Label identificativa della cartella in cui il file è stato salvato, ovvero della rotta che ha prodotto l'upload
+ */
+function returnRouteLabel(file)
+{
+    const destArray = file.destination.split("/");
+    return destArray[destArray.length - 1];
+}
+
+module.exports = { routesImagesParams, randomFileName, multerFileExtension, multerFileType, returnRouteLabel }
