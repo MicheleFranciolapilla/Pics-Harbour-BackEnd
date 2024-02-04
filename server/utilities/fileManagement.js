@@ -80,4 +80,41 @@ function returnRouteLabel(file)
 // Si è utilizzata la API ".promises" di "fs" poichè si è fatto ricorso al "async/await", senza callback function.
 const deleteFileBeforeThrow = async (file) => await fileSystem.promises.unlink(path.join(__dirname, "..", "..", file.path));
 
-module.exports = { routesImagesParams, randomFileName, multerFileExtension, multerFileType, returnRouteLabel, deleteFileBeforeThrow }
+/**
+* Funzione che restituisce il report conclusivo dell'operazione di upload del file immagine, recuperando tutti i dati dalla request
+* @function
+* @param {Object} req - express.request
+* @returns {Object} - Report conclusivo in formato oggetto
+*/
+function fileUploadReport(req)
+{
+    const { fileData, checkFileExtensionValidity, checkFileTypeValidity, checkFileSizeValidity } = req;
+    const fileType = multerFileType(fileData);
+    const fileExt = multerFileExtension(fileData);
+    const uploadReportObject =    
+        {
+            "File_Type"         :   {
+                                        "Provided_file_type"    :   fileType,
+                                        "Allowed_file_type"     :   "image",
+                                        "Is_valid_file_type"    :   checkFileTypeValidity
+                                    },
+            "File_extension"    :   {
+                                        "Provided_file_ext"     :   fileExt,
+                                        "Allowed_file_ext"      :   routesImagesParams[fileData.routeLabel].validExt,
+                                        "Is_valid_file_ext"     :   checkFileExtensionValidity
+                                    },
+            ...(checkFileSizeValidity !== undefined) && 
+            { 
+                "File_size"     :   {
+                                        "Provided_file_size"    :   `${req.file.size} bytes`,
+                                        "Max_allowed_file_size" :   `${routesImagesParams[fileData.routeLabel].maxSize * 1024 * 1024} bytes - (${routesImagesParams[fileData.routeLabel].maxSize} MB)`,
+                                        "Is_valid_file_size"    :   checkFileSizeValidity
+                                    }
+            },
+            // Se checkFileSizeValidity è undefined significa che il file non è mai stato caricato (valore false), altrimenti, il suo valore identifica lo stato di File_uploaded, ovvero true = size confome = file caricato (essendo automaticamente true anche i precedenti due checks), false = size non conforme = file non caricato
+            "File_uploaded"     :   (checkFileSizeValidity ?? false)
+        };
+    return uploadReportObject;
+}
+
+module.exports = { routesImagesParams, randomFileName, multerFileExtension, multerFileType, returnRouteLabel, deleteFileBeforeThrow, fileUploadReport }

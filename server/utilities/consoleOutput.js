@@ -1,6 +1,6 @@
-const dividerLength = 80;
+const dividerLength = 100;
 const dividerChar = "-";
-const headingLength = 70;
+const headingLength = 90;
 const headingChar = "*";
 
 /**

@@ -28,7 +28,7 @@ const validationOutcome = async (req, res, next) =>
             {
                 success = false;
             }
-            formattedOutput("FILE DELETION", `File to delete:   ${file.filename}`, `File folder:   ${file.destination}`, success ? "File successfully deleted" : "File not deleted, <<< DELETE IT MANUALLY >>>");
+            formattedOutput("FILE DELETION BY VALIDATION MIDDLEWARE", `File to delete:   ${file.filename}`, `File folder:   ${file.destination}`, success ? "File successfully deleted" : "File not deleted, <<< DELETE IT MANUALLY >>>");
         }
         return next(new ErrorRequestValidation(validationErrors.array(), "VALIDATION MIDDLEWARE"));
     }
