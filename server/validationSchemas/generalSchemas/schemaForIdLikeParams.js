@@ -13,6 +13,7 @@
  *
  * @param {string} paramName - Nome del parametro da validare
  * @param {string} location - Posizione del parametro (params, query, body)
+ * @param {boolean} isRequired - Flag booleano indicante l'obbligatorietà del parametro
  * @returns {Object} - Oggetto 'schema' di express validator utilizzabile dal metodo 'checkSchema'
  */
 const returnSchemaForIdLikeParams = (paramName, location, isRequired) =>

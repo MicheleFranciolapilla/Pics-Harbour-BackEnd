@@ -65,14 +65,5 @@ module.exports =
                                                 }
                         },
     ...userIdSchema,
-    categories      :   {
-                            in              :   ["body"],
-                            optional        :   true,
-                            isArray         :   {
-                                                    errorMessage    :   "Category Ids must be grouped into the array named 'category'",
-                                                    bail            :   true
-                                                },
-                        },
     "categories.*"  :   categoryIdSchema.categoryId
-
 }

@@ -1,16 +1,16 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const { matchedData } = require("express-validator");
+const fs = require("fs");
 
 async function store(req, res, next)
 {
-    console.log("BODY: ", req.body);
-    console.log("TYPE VIS: ", typeof req.body.visible);
-    console.log("BIS", req.file);
-    console.log("EXT: ", req.checkFileExtensionValidity);
-    console.log("TYPE: ", req.checkFileTypeValidity);
-    console.log("SIZE: ", req.checkFileSizeValidity);
-    console.log(matchedData(req, { onlyValidData : true }));
+    console.log(req.file);
+    const data = matchedData(req, {onlyValidData:true});
+    console.log(data);
+    console.log(typeof data.categories[1]);
+    console.log(__dirname);
+    res.json({});
 }
 
 module.exports = { store }

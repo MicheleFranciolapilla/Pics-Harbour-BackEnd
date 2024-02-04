@@ -1,3 +1,6 @@
+const fileSystem = require("fs");
+const path = require("path");
+
 /**
 * Oggetto contenente i parametri utilizzati dal multer middleware, a seconda della rotta in uso.
 * @typedef {Object} RoutesImagesParams
@@ -67,4 +70,14 @@ function returnRouteLabel(file)
     return destArray[destArray.length - 1];
 }
 
-module.exports = { routesImagesParams, randomFileName, multerFileExtension, multerFileType, returnRouteLabel }
+/**
+ * Arrow function asincrona utilizzata per cancellare un file precedentemente caricato da multer
+ * @function
+ * @async
+ * @param {Object} file - Oggetto express.request.file
+ * @returns {Promise<void>} Restituisce una promise che si risolve con la cancellazione del file o lanciando un errore.
+ */
+// Si è utilizzata la API ".promises" di "fs" poichè si è fatto ricorso al "async/await", senza callback function.
+const deleteFileBeforeThrow = async (file) => await fileSystem.promises.unlink(path.join(__dirname, "..", "..", file.path));
+
+module.exports = { routesImagesParams, randomFileName, multerFileExtension, multerFileType, returnRouteLabel, deleteFileBeforeThrow }
