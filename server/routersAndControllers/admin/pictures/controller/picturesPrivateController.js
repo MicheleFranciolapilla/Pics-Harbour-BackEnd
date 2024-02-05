@@ -12,20 +12,18 @@ const { formattedOutput } = require("../../../../utilities/consoleOutput");
 
 let prismaQuery = {};
 
+// Crud Store su rotta pictures (private)
 async function store(req, res, next)
 {
     let { title, description, visible, userId, categories } = matchedData(req, { onlyValidData : true });
     const { file } = req;
     categories = categories ?? [];
-    console.log("CATEGORIES: ", categories);
-    console.log("FILE OBJ: ",file);
     prismaQuery =
     {
         "where"     :   { "id" : userId },
         "select"    :   { "id" : true }
     };
     const userIdCheck = await prismaOperator(prisma, "user", "findUnique", prismaQuery);
-    console.log("QUERY SU USERID.... ", userIdCheck);
     prismaQuery =
     {
         "where"     :   { "id" : { "in" : categories } },
@@ -35,7 +33,6 @@ async function store(req, res, next)
     let missingCategories = [];
     if (categories.length !== 0)
         categoriesCheck = await prismaOperator(prisma, "category", "findMany", prismaQuery);
-    console.log("SUPERATA QUERY SU CATEGORIES ", categoriesCheck);
     let errorToThrow = null;
     if (userIdCheck.success && categoriesCheck.success)
     {
@@ -74,16 +71,7 @@ async function store(req, res, next)
     }
     else
         errorToThrow = new ErrorFromDB("Service temporarily unavailable", 503, "PICTURES (private) - STORE");
-    let success = true;
-    try
-    {
-        await deleteFileBeforeThrow(file);
-    }
-        catch(error)
-    {
-        success = false;
-    }
-    formattedOutput("FILE DELETION BY PICTURES (private) - STORE", `File to delete:   ${file.filename}`, `File folder:   ${file.destination}`, success ? "File successfully deleted" : "File not deleted, <<< DELETE IT MANUALLY >>>");
+    await deleteFileBeforeThrow(file, "PICTURES (private) - STORE");
     return next(errorToThrow);
 }
 

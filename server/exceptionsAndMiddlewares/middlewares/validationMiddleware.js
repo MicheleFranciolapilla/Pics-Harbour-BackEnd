@@ -18,18 +18,7 @@ const validationOutcome = async (req, res, next) =>
         // Nel caso di validazione con errori si verifica l'esistenza del file eventualmente (a seconda della rotta chiamata) caricato precedentemente dal middleware di multer e, se presente, si provvede alla sua cancellazione, comunicando al server l'esito favorevole o meno dell'operazione
         const { file } = req;
         if (file)
-        {
-            let success = true;
-            try
-            {
-                await deleteFileBeforeThrow(file);
-            }
-            catch(error)
-            {
-                success = false;
-            }
-            formattedOutput("FILE DELETION BY VALIDATION MIDDLEWARE", `File to delete:   ${file.filename}`, `File folder:   ${file.destination}`, success ? "File successfully deleted" : "File not deleted, <<< DELETE IT MANUALLY >>>");
-        }
+            await deleteFileBeforeThrow(file, "VALIDATION MIDDLEWARE");
         return next(new ErrorRequestValidation(validationErrors.array(), "VALIDATION MIDDLEWARE"));
     }
     else

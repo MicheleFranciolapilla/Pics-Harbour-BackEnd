@@ -1,6 +1,8 @@
 const fileSystem = require("fs");
 const path = require("path");
 
+const { formattedOutput } = require("./consoleOutput");
+
 /**
 * Oggetto contenente i parametri utilizzati dal multer middleware, a seconda della rotta in uso.
 * @typedef {Object} RoutesImagesParams
@@ -71,14 +73,27 @@ function returnRouteLabel(file)
 }
 
 /**
- * Arrow function asincrona utilizzata per cancellare un file precedentemente caricato da multer
+ * Arrow function asincrona utilizzata per cancellare un file precedentemente caricato da multer e riportare l'esito dell'operazione nella server console.
  * @function
  * @async
  * @param {Object} file - Oggetto express.request.file
- * @returns {Promise<void>} Restituisce una promise che si risolve con la cancellazione del file o lanciando un errore.
+ * @param {string} caller - Stringa identificativa del blocco chiamante
+ * @returns {Promise<void>} Restituisce una promise che si risolve con il tentativo di cancellazione del file e la visualizzazione dell'esito dell'operazione sulla console del server.
  */
 // Si è utilizzata la API ".promises" di "fs" poichè si è fatto ricorso al "async/await", senza callback function.
-const deleteFileBeforeThrow = async (file) => await fileSystem.promises.unlink(path.join(__dirname, "..", "..", file.path));
+const deleteFileBeforeThrow = async (file, caller) => 
+{
+    let success = true;
+    try
+    {
+        await fileSystem.promises.unlink(path.join(__dirname, "..", "..", file.path));
+    }
+    catch(error)
+    {
+        success = false;
+    }
+    formattedOutput(`FILE DELETION BY ${caller}`, `File to delete:   ${file.filename}`, `File folder:   ${file.destination}`, success ? "File successfully deleted" : "File not deleted, <<< DELETE IT MANUALLY >>>");
+}
 
 /**
 * Funzione che restituisce il report conclusivo dell'operazione di upload del file immagine, recuperando tutti i dati dalla request

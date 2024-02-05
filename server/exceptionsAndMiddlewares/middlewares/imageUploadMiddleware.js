@@ -49,16 +49,7 @@ const fileUploadProcessTerminator = async (req, res, next) =>
         if (uploadReport.File_Type.Is_valid_file_type && uploadReport.File_extension.Is_valid_file_ext)
         {
             const { file } = req;
-            let success = true;
-            try
-            {
-                await deleteFileBeforeThrow(file);
-            }
-            catch(error)
-            {
-                success = false;
-            }
-            formattedOutput("FILE DELETION BY UPLOAD PROCESS TERMINATOR", `File to delete:   ${file.filename}`, `File folder:   ${file.destination}`, success ? "File successfully deleted" : "File not deleted, <<< DELETE IT MANUALLY >>>");
+            await deleteFileBeforeThrow(file, "UPLOAD PROCESS TERMINATOR");
         }
         // Una volta certi dell'avvenuta cancellazione del file non valido, si valuta se terminare il processo con un errore (caso in cui l'upload del file è propedeutico a qualunque altra operazione conseguente - fattispecie "pictures" e "categories", oppure la sua non validità e quindi la sua assenza, non preclude alla prosecuzione del processo - fattispecie "users")
         if (req.fileData.throwIfInvalid === false)
