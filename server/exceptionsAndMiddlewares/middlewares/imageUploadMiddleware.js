@@ -35,6 +35,7 @@ const fileUploadProcessTerminator = async (req, res, next) =>
 {
     // Si recupera il report relativo allo stato di upload del file
     const uploadReport = fileUploadReport(req);
+    formattedOutput("FILE UPLOAD REPORT", uploadReport);
     // Se lo stato dell'upload è true significa che il file è valido e si passa dunque al middleware seguente (di validazione dei dati)
     if (uploadReport.File_uploaded)
         return next();

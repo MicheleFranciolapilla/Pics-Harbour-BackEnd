@@ -36,6 +36,7 @@ module.exports =
                         },
     description     :   {
                             in              :   ["body"],
+                            optional        :   true,
                             isString        :   true,
                             trim            :   true,
                             isLength        :   {
@@ -65,5 +66,14 @@ module.exports =
                                                 }
                         },
     ...userIdSchema,
+    categories      :   {
+                            in              :   ["body"],
+                            optional        :   true,
+                            isArray         :   {
+                                                    errorMessage    :   "Categories must be an array",
+                                                    bail            :   true
+                                                },
+                            customSanitizer :   {   options         :   (value) => [...new Set(value)] }
+                        },
     "categories.*"  :   categoryIdSchema.categoryId
 }
