@@ -11,6 +11,7 @@ const { deleteFileBeforeThrow } = require("../../../../utilities/fileManagement"
 const { formattedOutput } = require("../../../../utilities/consoleOutput");
 
 let prismaQuery = {};
+let errorToThrow = null;
 
 // Crud Store su rotta pictures (private)
 async function store(req, res, next)
@@ -33,7 +34,6 @@ async function store(req, res, next)
     let missingCategories = [];
     if (categories.length !== 0)
         categoriesCheck = await prismaOperator(prisma, "category", "findMany", prismaQuery);
-    let errorToThrow = null;
     if (userIdCheck.success && categoriesCheck.success)
     {
         if (!userIdCheck.data)
