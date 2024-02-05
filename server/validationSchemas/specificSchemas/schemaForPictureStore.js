@@ -1,4 +1,4 @@
-const { tablePicturesColumnTitle, minTitleLength, maxDescriptionLength } = require("../../utilities/variables");
+const { tablePicturesColumnTitleSize, minTitleLength, maxDescriptionLength } = require("../../utilities/variables");
 
 const { returnSchemaForIdLikeParams } = require("../generalSchemas/schemaForIdLikeParams");
 
@@ -21,16 +21,16 @@ module.exports =
                             isLength        :   {
                                                     options         :   { 
                                                                             min :   minTitleLength,
-                                                                            max :   tablePicturesColumnTitle 
+                                                                            max :   tablePicturesColumnTitleSize 
                                                                         },
-                                                    errorMessage    :   `Title's length must be in [${minTitleLength}...${tablePicturesColumnTitle}] characters`,
+                                                    errorMessage    :   `Title's length must be in [${minTitleLength}...${tablePicturesColumnTitleSize}] characters`,
                                                     bail            :   true
                                                 },
                             escape          :   true,
                             customSanitizer :   {
                                                     options         :   (value) => 
-                                                                        (value.length > tablePicturesColumnTitle) 
-                                                                        ? (value.slice(0, tablePicturesColumnTitle)) 
+                                                                        (value.length > tablePicturesColumnTitleSize) 
+                                                                        ? (value.slice(0, tablePicturesColumnTitleSize)) 
                                                                         : value
                                                 }
                         },

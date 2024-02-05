@@ -10,22 +10,30 @@ const tokenLifeTime = "1h";
 const tableUsersColumnNameSize = 20;
 const tableUsersColumnSurnameSize = 30;
 const tableUsersColumnEmailSize = 100;
-const tablePicturesColumnTitle = 50;
+const tablePicturesColumnTitleSize = 50;
+const tableCategoriesColumnNameSize = 20;
+const minUsersNameLength = 2;
+const minUsersSurnameLength = 2;
 const minEmailLength = 5;
 const minPasswordLength = 8;
 const maxPasswordLength = 20;
 const minTitleLength = 10;
 const maxDescriptionLength = 1000;
+const minCategoriesNameLength = 3;
 
 module.exports =    { 
                         tokenLifeTime, 
                         tableUsersColumnNameSize, 
                         tableUsersColumnSurnameSize, 
                         tableUsersColumnEmailSize,
-                        tablePicturesColumnTitle,
+                        tablePicturesColumnTitleSize,
+                        tableCategoriesColumnNameSize,
+                        minUsersNameLength,
+                        minUsersSurnameLength,
                         minEmailLength,
                         minPasswordLength,
                         maxPasswordLength,
                         minTitleLength,
-                        maxDescriptionLength
+                        maxDescriptionLength,
+                        minCategoriesNameLength
                     }

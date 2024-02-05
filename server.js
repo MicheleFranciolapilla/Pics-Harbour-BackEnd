@@ -10,13 +10,14 @@ const usersPublicRoutes = require("./server/routersAndControllers/guest/users/ro
 // Parte Privata
 const usersPrivateRoutes = require("./server/routersAndControllers/admin/users/routes/usersPrivateRoutes");
 const picturesPrivateRoutes = require("./server/routersAndControllers/admin/pictures/routes/picturesPrivateRoutes");
+const categoriesPrivateRoutes = require("./server/routersAndControllers/admin/categories/routes/categoriesPrivateRoutes");
 
 // Importazione middlewares
 const errorManager = require("./server/exceptionsAndMiddlewares/middlewares/errorManager");
 const route404 = require("./server/exceptionsAndMiddlewares/middlewares/middleware404");
 
 // Implementazione server
-const   port = process.env.port
+const   port = process.env.port;
 const   server = express();
 // Settaggio CORS Policy
 server.use(cors(
@@ -36,6 +37,7 @@ server.use("/users", usersPublicRoutes);
 // Rotte private
 server.use("/users", usersPrivateRoutes);
 server.use("/pictures", picturesPrivateRoutes);
+server.use("/categories", categoriesPrivateRoutes);
 
 // Middlewares errori
 server.use(route404);
