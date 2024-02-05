@@ -35,7 +35,8 @@ model User {
 // Modello della tabella Categories
 model Category {
   id        Int       @id @default(autoincrement())
-  name      String    @db.VarChar(20)
+  name      String    @db.VarChar(30)
+  slug      String    @db.VarChar(30) @unique
   // Vedere considerazioni fatte per la colonna "thumb" nella tabella "Users"
   thumb     String?   @db.VarChar(25)
   // Relazione MANY TO MANY con tabella Pictures

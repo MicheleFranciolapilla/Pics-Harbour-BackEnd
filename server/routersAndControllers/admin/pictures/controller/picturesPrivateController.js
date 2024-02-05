@@ -40,23 +40,34 @@ async function store(req, res, next)
             errorToThrow = new ErrorResourceNotFound(`UserId [${userId}]`, "PICTURES (private) - STORE");
         else if (categoriesCheck.data.length < categories.length)
         {
-            missingCategories = categories.filter( catId => !(categoriesCheck.data.includes(catId)));
+            categories.forEach( catId =>
+                {
+                    if (!categoriesCheck.data.some( idObject => idObject.id === catId ))
+                        missingCategories.push(catId);
+                });
             errorToThrow = new ErrorResourceNotFound(`Category Ids [${missingCategories}]`, "PICTURES (private) - STORE");
         }
         else
         {
             prismaQuery =
             {
-                "data"  :   {
-                                "title"         :   title,
-                                "description"   :   description,
-                                "image"         :   file.filename,
-                                "visible"       :   visible,
-                                "userId"        :   userId,
-                                ...((categories.length !== 0) 
-                                    && 
-                                {"categories"   :   categories})
-                            }
+                "data"      :   {
+                                    "title"         :   title,
+                                    "description"   :   description,
+                                    "image"         :   file.filename,
+                                    "visible"       :   visible,
+                                    "userId"        :   userId,
+                                    ...((categories.length !== 0) 
+                                        && 
+                                    {"categories"   :   {
+                                                            "connect"   :   categories.map( catId => ({ "id" : catId }))
+                                                        }})
+                                },
+                "include"   :   {   
+                                    "categories"    :   {
+                                                            "select"    :   { "id" : true }
+                                                        }
+                                }
             };
             const newPicture = await prismaOperator(prisma, "picture", "create", prismaQuery);
             if ((!newPicture.success) || (!newPicture.data))

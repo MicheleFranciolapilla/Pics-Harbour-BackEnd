@@ -64,4 +64,6 @@ function upperStartingChar(normalizedStringOfWords, allFirstChars)
     return wordsArray.join(" ");
 }
 
-module.exports = { prismaOperator, removeProperties, normalizeSpaces, upperStartingChar }
+const basicSlug = (stringToSlug, slugChar) => stringToSlug.replaceAll(" ", slugChar).toLowerCase();
+
+module.exports = { prismaOperator, removeProperties, normalizeSpaces, upperStartingChar, basicSlug }

@@ -4,7 +4,7 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const { matchedData } = require("express-validator");
 
-const ErrorEmailNotNew = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorEmailNotNew");
+const ErrorRepeatedData = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorRepeatedData");
 const ErrorFromDB = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorFromDB");
 const ErrorResourceNotFound = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorResourceNotFound");
 const ErrorInvalidData = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorInvalidData");
@@ -35,7 +35,7 @@ async function signUp(req, res, next)
         return next(new ErrorFromDB("Service temporarily unavailable", 503, "AUTH - SIGNUP"));
     // Caso in cui l'email sia già presente nel database
     else if (checkEmailExistence.data)
-        return next(new ErrorEmailNotNew("Invalid email - already in use!", "AUTH - SIGNUP"));
+        return next(new ErrorRepeatedData("email", "AUTH - SIGNUP"));
     // Si prosegue se l'email non è già presente nel db
     const hashedPsw = await bcrypt.hash(password, parseInt(process.env.BCRYPT_SALT_ROUNDS));
     prismaQuery =   {

@@ -5,8 +5,9 @@ const { matchedData } = require("express-validator");
 const ErrorFromDB = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorFromDB");
 const ErrorResourceNotFound = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorResourceNotFound");
 const ErrorUserNotAllowed = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorUserNotAllowed");
+const ErrorRepeatedData = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorRepeatedData");
 
-const { prismaOperator } = require("../../../../utilities/general");
+const { prismaOperator, basicSlug } = require("../../../../utilities/general");
 const { deleteFileBeforeThrow } = require("../../../../utilities/fileManagement");
 const { formattedOutput } = require("../../../../utilities/consoleOutput");
 
@@ -33,23 +34,35 @@ async function store(req, res, next)
             errorToThrow = new ErrorUserNotAllowed("User not allowed to create categories", "CATEGORIES (PRIVATE) - STORE");
         else
         {
-            prismaQuery =
+            const nameSlug = basicSlug(name, "-");
+            // Si verifica che non sia già presente una category con lo stesso slug
+            prismaQuery = { "where" :   { "slug" : nameSlug } };
+            const slugCheck = await prismaOperator(prisma, "category", "findUnique", prismaQuery);
+            if (!slugCheck.success)
+                errorToThrow = new ErrorFromDB("Service temporarily unavailable", 503, "CATEGORIES (private) - STORE");
+            else if (!slugCheck.data)
             {
-                "data"  :   {
-                                "name"      :   name,
-                                "thumb"     :   file.filename,
-                                "userId"    :   userId
-                            }
+                prismaQuery =
+                {
+                    "data"  :   {
+                                    "name"      :   name,
+                                    "slug"      :   nameSlug,
+                                    "thumb"     :   file.filename,
+                                    "userId"    :   userId
+                                }
+                }
+                const newCategory = await prismaOperator(prisma, "category", "create", prismaQuery);
+                if ((!newCategory.success) || (!newCategory.data))
+                    errorToThrow = new ErrorFromDB("Operation refused", 403, "CATEGORIES (private) - STORE");
+                else
+                {
+                    const category = newCategory.data;
+                    formattedOutput("CATEGORIES (private) - STORE - SUCCESS", "***** Status: 201", "***** New Category: ", category);
+                    return res.status(201).json({ category });
+                }
             }
-            const newCategory = await prismaOperator(prisma, "category", "create", prismaQuery);
-            if ((!newCategory.success) || (!newCategory.data))
-                errorToThrow = new ErrorFromDB("Operation refused", 403, "CATEGORIES (private) - STORE");
             else
-            {
-                const category = newCategory.data;
-                formattedOutput("CATEGORIES (private) - STORE - SUCCESS", "***** Status: 201", "***** New Category: ", category);
-                return res.status(201).json({ category });
-            }
+                errorToThrow = new ErrorRepeatedData("slug", "CATEGORIES (private) - STORE");
         } 
     }
     else

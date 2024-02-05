@@ -1,4 +1,4 @@
-const { normalizeSpaces, upperStartingChar } = require("../server/utilities/general");
+const { normalizeSpaces, upperStartingChar, basicSlug } = require("../server/utilities/general");
 
 describe("function normalizeSpaces: sostituisce tutti i raggruppamenti di spazi con un singolo spazio", () =>
     {
@@ -54,6 +54,19 @@ describe("function upperStartingChar: riceve una stringa NORMALIZZATA di parole 
             {
                 expect(upperStartingChar(" ", true)).toEqual(" ");
             });    
+    });
+
+describe("function basicSlug: restituisce il semplice slug di una stringa normalizzata (parola singola o più parole divise da un unico spazio) ed in lowercase. Il carattere che sostituisce lo spazio viene passato come secondo parametro", () =>
+    {
+        test("Stringa vuota: risultato '-'", () =>
+            {
+                expect(basicSlug(" ", "-")).toEqual("-");
+            });
+        test("Stringa normalizzata",() =>
+            {
+                const result = "test-relativo-allo-slug";
+                expect(basicSlug("TESt relaTIvo alLO SLug", "-")).toEqual(result);
+            });
     });
 
 
