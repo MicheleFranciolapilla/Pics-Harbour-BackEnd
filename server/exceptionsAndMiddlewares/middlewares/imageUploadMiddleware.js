@@ -33,6 +33,9 @@ const imageWeightCheck = (req, res, next) =>
 */
 const fileUploadProcessTerminator = async (req, res, next) =>
 {
+    const { fileData } = req;
+    if (!fileData)
+        return next();
     // Si recupera il report relativo allo stato di upload del file
     const uploadReport = fileUploadReport(req);
     formattedOutput("FILE UPLOAD REPORT", uploadReport);
@@ -67,6 +70,110 @@ const fileUploadProcessTerminator = async (req, res, next) =>
  */
 const imageUploader = (routeLabel, throwIfInvalid = true) =>
 {
+    const checkHTTPContentType = (req, res, next) => 
+    {
+        const contentType = req.get('Content-Type');
+        console.log(contentType);
+        if (!contentType.startsWith('multipart/form-data'))
+            // If content-type is not multipart/form-data, skip multer and move to the next middleware
+            return next(); // <-- Add the return statement here
+                multer({ "storage": storage, "fileFilter": fileFilter }).single(paramsObj.fieldName)(req, res, (multerError) => {
+                    if (multerError) {
+                        throw new Error("Operation refused! It is possible you are trying to use the wrong Content-Type. Do not use 'multipart/form-data' if you are not uploading a file.");
+                    }
+                    console.log("STEP 1 SUPERATO");
+                    imageWeightCheck(req, res, (sizeCheckError) => {
+                        if (sizeCheckError) {
+                            throw new Error("Operation refused! It is possible you are trying to use the wrong Content-Type. Do not use 'multipart/form-data' if you are not uploading a file.");
+                        }
+                        console.log("STEP 2 SUPERATO");
+                        console.log(req.fileData);
+                        fileUploadProcessTerminator(req, res, (processTerminatorError) => {
+                            if (processTerminatorError) {
+                                throw new Error("Operation refused! It is possible you are trying to use the wrong Content-Type. Do not use 'multipart/form-data' if you are not uploading a file.");
+                            }
+                            // If all Promises are resolved without errors, proceed to the next middleware
+                            console.log("STEP 3 SUPERATO");
+                            return next();
+                        });
+                    });
+                });
+            // try {
+            //     await multer({ "storage": storage, "fileFilter": fileFilter }).single(paramsObj.fieldName)(req, res, next);
+            //     await imageWeightCheck(req, res, next);
+            //     await fileUploadProcessTerminator(req, res, next);
+    
+            //     // If all Promises are resolved without errors, proceed to the next middleware
+            //     return next();
+            // } catch (error) {
+            //     // If any Promise rejects, catch the error and pass it to the next middleware
+            //     return next(new ErrorContentType("Operation refused! It is possible you are trying to use the wrong Content-Type. Do not use 'multipart/form-data' if you are not uploading a file.", "MIDDLEWARE ERROR"));
+            // }
+        // If content-type is multipart/form-data, proceed with multer
+        // let errorToThrow = null;
+        // try
+        // {
+        //     await new Promise( (resolve, reject) =>
+        //         {
+        //             multer({ "storage" : storage, "fileFilter" : fileFilter }).single(paramsObj.fieldName)(req, res, (multerError) =>
+        //                 {
+        //                     if (multerError)
+        //                     {
+        //                         errorToThrow = new ErrorContentType("Operation refused! It is possible you are trying to use the wrong Content-Type. Do not use 'multipart/form-data' if you are not uploading a file.", "MULTER CONFIGURATION MIDDLEWARE");
+        //                         reject();
+        //                     }
+        //                         // reject(new ErrorContentType("Operation refused! It is possible you are trying to use the wrong Content-Type. Do not use 'multipart/form-data' if you are not uploading a file.", "MULTER CONFIGURATION MIDDLEWARE"));
+        //                     else
+        //                         resolve();
+        //                 });
+        //         });
+        //     await new Promise( (resolve, reject) =>
+        //         {
+        //             imageWeightCheck(req, res, (sizeCheckError) =>
+        //                 {
+        //                     if (sizeCheckError)
+        //                     {
+        //                         errorToThrow = new ErrorContentType("Operation refused! It is possible you are trying to use the wrong Content-Type. Do not use 'multipart/form-data' if you are not uploading a file.", "MULTER IMAGE SIZE CHECK MIDDLEWARE");
+        //                         reject();
+        //                     }
+        //                         // reject(new ErrorContentType("Operation refused! It is possible you are trying to use the wrong Content-Type. Do not use 'multipart/form-data' if you are not uploading a file.", "MULTER IMAGE SIZE CHECK MIDDLEWARE"));
+        //                     else
+        //                         resolve();
+        //                 });
+        //         });
+        //     await new Promise( (resolve, reject) =>
+        //         {
+        //             fileUploadProcessTerminator(req, res, (processTerminatorError) =>
+        //                 {
+        //                     if (processTerminatorError)
+        //                     {
+        //                         errorToThrow = new ErrorContentType("Operation refused! It is possible you are trying to use the wrong Content-Type. Do not use 'multipart/form-data' if you are not uploading a file.", "MULTER PROCESS TERMINATOR MIDDLEWARE");
+        //                         reject();
+        //                     }
+        //                         // reject(new ErrorContentType("Operation refused! It is possible you are trying to use the wrong Content-Type. Do not use 'multipart/form-data' if you are not uploading a file.", "MULTER PROCESS TERMINATOR MIDDLEWARE"));
+        //                     else
+        //                         resolve();
+        //                 });
+        //         });
+        //     next();
+        // }
+        // catch(error)
+        // {
+        //     return next(errorToThrow);
+        // }
+        // multer({ "storage" : storage, "fileFilter" : fileFilter }).single(paramsObj.fieldName)(req, res, multerError => 
+        //     {
+        //         if (multerError) 
+        //             return next(new ErrorContentType("Operation refused! It is possible you are trying to use the wrong Content-Type. Do not use 'multipart/form-data' if you are not uploading a file.", "MULTER CONFIGURATION MIDDLEWARE"));
+        //         imageWeightCheck(req, res, imageSizeCheckError => 
+        //         {
+        //             if (imageSizeCheckError) 
+        //                 return next(new ErrorContentType("Operation refused! It is possible you are trying to use the wrong Content-Type. Do not use 'multipart/form-data' if you are not uploading a file.", "MULTER IMAGE SIZE CHECK MIDDLEWARE"));
+        //             fileUploadProcessTerminator(req, res, next);
+        //         });
+        //     });
+    };
+
     const paramsObj = routesImagesParams[routeLabel];
     // Configurazione dello storage engine:
     /**
@@ -99,6 +206,7 @@ const imageUploader = (routeLabel, throwIfInvalid = true) =>
     */
     const fileFilter = (req, file, cb) =>
     {
+        console.log("INSIDE")
         const checkFileExtension = paramsObj.validExt.includes(multerFileExtension(file));
         const checkFileType = multerFileType(file) === "image";
         // Vengono creati due campi specifici in req per indicare se e quali criteri di validità non sono garantiti dal file in upload.
@@ -118,8 +226,9 @@ const imageUploader = (routeLabel, throwIfInvalid = true) =>
         cb(null, checkFileExtension && checkFileType);
     }
 
-    let middlewaresToReturn = [ multer({ "storage" : storage, "fileFilter" : fileFilter }).single(paramsObj.fieldName), imageWeightCheck, fileUploadProcessTerminator ];
-    return middlewaresToReturn;
+    // let middlewaresToReturn = [ multer({ "storage" : storage, "fileFilter" : fileFilter }).single(paramsObj.fieldName), imageWeightCheck, fileUploadProcessTerminator ];
+    // return middlewaresToReturn;
+    return checkHTTPContentType;
 }
 
 module.exports = { imageUploader };

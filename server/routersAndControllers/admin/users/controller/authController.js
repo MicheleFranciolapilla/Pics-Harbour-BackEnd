@@ -26,8 +26,18 @@ const { tokenLifeTime } = require("../../../../utilities/variables");
 async function signUp(req, res, next)
 {
     const { name, surname, email, password } = matchedData(req, { onlyValidData : true });
+    // Nella rotta "/users/signup" è previsto, facoltativamente, anche il caricamente del file immagine della "thumb".
+    // Nel router la rotta è già fornita del middleware di caricamento del file (multer) con il flag indicante che, in caso di non validità del file, lo stesso venga rimosso ma non venga lanciato alcun errore, dando modo al processo di proseguire.
+    // In questo punto del processo, oltre ad avere i dati già validati, ci si può trovare in una delle seguenti situazioni:
+    // A - Non è stato richiesto alcun caricamento del file della thumb
+    // B - E' stato tentato il caricamento del file della thumb ma, poichè non valido in termini di estensione e/o tipo, non è mai stato salvato nel server.
+    // C - E' stato tentato il caricamento del file della thumb ma, poichè non valido per la dimensione eccessiva, è stato rimosso dopo il salvataggio.
+    // D - Il file della thumb è stato correttamente caricato nel server.
+    // Caso A: in "req" non è presente nessun campo "file" e nessuno dei campi informativi caricati dal middleware di upLoad
+    // Caso B:  
     // Verifica di non esistenza dell'email nel database
     // Si predilige il metodo findUnique a count poichè più rapido in caso di esistenza
+    console.log(req.file);
     let prismaQuery = { "where" : { "email" : email } };
     const checkEmailExistence = await prismaOperator(prisma, "user", "findUnique", prismaQuery);
     // Caso in cui sia stato lanciato un errore:
