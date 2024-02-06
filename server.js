@@ -8,13 +8,15 @@ const express = require("express");
 const home = require("./server/routersAndControllers/guest/home/controller/homeController");
 const usersPublicRoutes = require("./server/routersAndControllers/guest/users/routes/usersPublicRoutes");
 // Parte Privata
+const authRoutes = require("./server/routersAndControllers/admin/users/routes/authRoutes");
 const usersPrivateRoutes = require("./server/routersAndControllers/admin/users/routes/usersPrivateRoutes");
 const picturesPrivateRoutes = require("./server/routersAndControllers/admin/pictures/routes/picturesPrivateRoutes");
 const categoriesPrivateRoutes = require("./server/routersAndControllers/admin/categories/routes/categoriesPrivateRoutes");
 
 // Importazione middlewares
-const errorManager = require("./server/exceptionsAndMiddlewares/middlewares/errorManager");
+const authorizationMiddleware = require("./server/exceptionsAndMiddlewares/middlewares/authorizationMiddleware");
 const route404 = require("./server/exceptionsAndMiddlewares/middlewares/middleware404");
+const errorManager = require("./server/exceptionsAndMiddlewares/middlewares/errorManager");
 
 // Implementazione server
 const   port = process.env.port;
@@ -34,10 +36,19 @@ server.use(express.urlencoded({ extended : true }));
 // Rotte pubbliche
 server.get("/", home);
 server.use("/users", usersPublicRoutes);
+// Rotte di autenticazione
+server.use("/users", authRoutes);
 // Rotte private
-server.use("/users", usersPrivateRoutes);
-server.use("/pictures", picturesPrivateRoutes);
-server.use("/categories", categoriesPrivateRoutes);
+// La sintassi utilizzata per registrare il middleware "authorizationMiddleware" sulle rotte protette è necessaria ai fini di poter passare un argomento extra al middleware stesso quando lo si registra direttamente nella server app. La registrazione eventuale dentro un router sarebbe di tipo più semplice (vedere la sintassi utilizzata nei routers per i middlewares "imageUploader o validationMiddleware").
+// Nel caso specifico, la sintassi è assimilabile alla seguente:
+// (req, res, next) => 
+// {
+//    const middlewareFunction = authorizationMiddleware("Super Admin");
+//    middlewareFunction(req, res, next);
+// }
+server.use("/users", (req, res, next) => authorizationMiddleware("Admin")(req, res, next), usersPrivateRoutes);
+server.use("/pictures", (req, res, next) => authorizationMiddleware("Admin")(req, res, next), picturesPrivateRoutes);
+server.use("/categories", (req, res, next) => authorizationMiddleware("Super Admin")(req, res, next), categoriesPrivateRoutes);
 
 // Middlewares errori
 server.use(route404);

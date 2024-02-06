@@ -16,30 +16,33 @@ let errorToThrow = null;
 
 async function store(req, res, next)
 {
-    const { name, userId } = matchedData(req, { onlyValidData : true });
+    const { name } = matchedData(req, { onlyValidData : true });
+    const userId = req.tokenOwner.id;
     const { file } = req;
-    // In virtù del fatto che le categorie possono essere create solo dai "Super Admin", contestualmente alla verifica di esistenza dello user (creatore della category), se ne verifica anche il ruolo
-    // VALUTARE IN FUTURO SE SPOSTARE I CONTROLLI RELATIVI ALLE AUTORIZZAZIONI DENTRO UNO SPECIFICO MIDDLEWARE DI ROTTA PRIVATA
     prismaQuery =
     {
         "where"     :   { "id" : userId },
-        "select"    :   { "role" : true }
+        "select"    :   { "id" : true }
     };
+    // Si verifica l'esistenza della userId nel database poichè, in casi estremi, lo user (Super Admin per le rotte private di "/categories") potrebbe anche essersi cancellato dopo essersi loggato ed il suo token potrebbe ancora essere valido.
+    // In futuro si potrebbe considerare l'eventualità che lo user (Super Admin) possa, nel frattempo anche essere stato degradato a semplice "Admin". Al momento non si considera questa possibilità.
     const userIdCheck = await prismaOperator(prisma, "user", "findUnique", prismaQuery);
     if (userIdCheck.success)
     {
         if (!userIdCheck.data)
             errorToThrow = new ErrorResourceNotFound(`UserId [${userId}]`, "CATEGORIES (private) - STORE");
-        else if (userIdCheck.data.role !== "Super Admin")       
-            errorToThrow = new ErrorUserNotAllowed("User not allowed to create categories", "CATEGORIES (PRIVATE) - STORE");
+        // Il blocco "else if" seguente può essere ripreso in considerazione nel caso futuro enunciato nel commento precedente
+        // else if (userIdCheck.data.role !== "Super Admin")       
+        //     errorToThrow = new ErrorUserNotAllowed("User not allowed to create categories", "CATEGORIES (PRIVATE) - STORE");
         else
         {
-            const nameSlug = basicSlug(name, "-");
+            const nameSlug = basicSlug(name);
             // Si verifica che non sia già presente una category con lo stesso slug
             prismaQuery = { "where" :   { "slug" : nameSlug } };
             const slugCheck = await prismaOperator(prisma, "category", "findUnique", prismaQuery);
             if (!slugCheck.success)
                 errorToThrow = new ErrorFromDB("Service temporarily unavailable", 503, "CATEGORIES (private) - STORE");
+            // Se nel db non è presente una category con lo stesso slug si può procedere con la creazione della stessa
             else if (!slugCheck.data)
             {
                 prismaQuery =

@@ -64,6 +64,12 @@ function upperStartingChar(normalizedStringOfWords, allFirstChars)
     return wordsArray.join(" ");
 }
 
-const basicSlug = (stringToSlug, slugChar) => stringToSlug.replaceAll(" ", slugChar).toLowerCase();
+/**
+ * Funzione che restituisce un semplice slug della stringa passata come parametro
+ * @param {string} stringToSlug - Stringa (preferibilmente normalizzata) da "sluggare"
+ * @param {string} slugChar [slugChar="-"] - Carattere che sostituirà lo spazio
+ * @returns {string} - Slug della stringa (preferibilmente normalizzata) in ingresso
+ */
+const basicSlug = (stringToSlug, slugChar = "-") => stringToSlug.replaceAll(" ", slugChar).toLowerCase();
 
 module.exports = { prismaOperator, removeProperties, normalizeSpaces, upperStartingChar, basicSlug }

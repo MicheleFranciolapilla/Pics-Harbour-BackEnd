@@ -100,20 +100,19 @@ function checkToken(req, res, next)
 {
     const { token } = req.body;
     if (token)
-    {
-        try
-        {
-            const payLoad = jwt.verify(token, process.env.JWT_SECRET);
-            // Si procede senza la verifica del valore del payload poichè, in caso di esito negativo, il metodo "verify" lancia direttamente un'eccezione, gestita, poi, nel blocco catch
-            formattedOutput("AUTH - CHECKTOKEN - SUCCESS", "***** Status: 200", "***** Token: ", token, "***** PayLoad: ", payLoad);
-            return res.json({ token, payLoad });
-        }
-        catch(error)
-        {
-            const exceptionStr = (error.message == "jwt expired") ? "expired" : "wrong";
-            return next(new ErrorInvalidData(`token (${exceptionStr})`, "AUTH - CHECKTOKEN"));
-        }
-    }
+        jwt.verify(token, process.env.JWT_SECRET, (error, payload) =>
+            {
+                if (error)
+                {
+                    const exceptionStr = (error.message === "jwt expired") ? "expired" : "wrong";
+                    return next(new ErrorInvalidData(`token (${exceptionStr})`, "AUTH - CHECKTOKEN"));
+                }
+                else
+                {
+                    formattedOutput("AUTH - CHECKTOKEN - SUCCESS", "***** Status: 200", "***** Token: ", token, "***** Payload: ", payload);
+                    return res.json({ token, payload });
+                }
+            });
     else
         return next(new ErrorInvalidData("token (missing)", "AUTH - CHECKTOKEN"));
 }

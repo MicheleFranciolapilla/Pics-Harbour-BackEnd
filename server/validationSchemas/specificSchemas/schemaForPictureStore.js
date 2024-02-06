@@ -1,8 +1,10 @@
+// COME GIA' DETTO NELLO SCHEMA DI VALIDAZIONE DELLA STORE SU ROTTA PRIVATA "/categories", ANCHE SU QUESTA ROTTA PRIVATA, ESSENDO L'ACCESSO MEDIATO DA UN MIDDLEWARE AUTORIZZATIVO CHE, IN CASO FAVOREVOLE, SALVA NELLA REQUEST, TRA LE ALTRE COSE, ANCHE L'ID DEL RICHIEDENTE ACCESSO, LA "userId" DEVE ESSERE RECUPERATA DIRETTAMENTE DI LI' E DUNQUE NON PIU' SOGGETTA A VALIDAZIONE
+
 const { tablePicturesColumnTitleSize, minTitleLength, maxDescriptionLength } = require("../../utilities/variables");
 
 const { returnSchemaForIdLikeParams } = require("../generalSchemas/schemaForIdLikeParams");
 
-const userIdSchema = returnSchemaForIdLikeParams("userId", "body", true);
+// const userIdSchema = returnSchemaForIdLikeParams("userId", "body", true);
 const categoryIdSchema = returnSchemaForIdLikeParams("categoryId", "body", false);
 
 /** 
@@ -65,7 +67,7 @@ module.exports =
                                                                         : undefined
                                                 }
                         },
-    ...userIdSchema,
+    // ...userIdSchema,
     categories      :   {
                             in              :   ["body"],
                             optional        :   true,

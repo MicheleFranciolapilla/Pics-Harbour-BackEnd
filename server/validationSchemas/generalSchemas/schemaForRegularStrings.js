@@ -29,16 +29,16 @@ const returnSchemaForRegularStrings = (fieldName, minValueLength, maxValueLength
                             isString        :   true,
                             trim            :   true,
                             notEmpty        :   {
-                                                    errorMessage    :   `The field ${fieldName} cannot be empty`,
+                                                    errorMessage    :   `The field [${fieldName}] cannot be empty`,
                                                     bail            :   true
                                                 },
                             isLength        :   {
                                                     options         :   { min : minValueLength },
-                                                    errorMessage    :   `The field ${fieldName} cannot be shorter than ${minValueLength} characters`
+                                                    errorMessage    :   `The field [${fieldName}] cannot be shorter than ${minValueLength} characters`
                                                 },
                             matches         :   {
                                                     options         :   /^[a-zA-Z ]+$/,
-                                                    errorMessage    :   `The field ${fieldName} can only contain letters and spaces`,
+                                                    errorMessage    :   `The field [${fieldName}] can only contain letters and spaces`,
                                                     bail            :   true
                                                 },
                             customSanitizer :   {   
@@ -56,7 +56,7 @@ const returnSchemaForRegularStrings = (fieldName, minValueLength, maxValueLength
                                                     options         :   (value) =>
                                                                         {
                                                                             if ((value.length > maxValueLength) && (!truncateIfLonger))
-                                                                                return Promise.reject(`The field ${fieldName} cannot be longer than ${maxValueLength} characters`);
+                                                                                return Promise.reject(`The field [${fieldName}] cannot be longer than ${maxValueLength} characters`);
                                                                             else
                                                                                 return true;
                                                                         }
