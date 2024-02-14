@@ -10,15 +10,14 @@ const { prismaOperator } = require("../../../../utilities/general");
 const { deleteFileBeforeThrow } = require("../../../../utilities/fileManagement");
 const { formattedOutput } = require("../../../../utilities/consoleOutput");
 
-let prismaQuery = {};
-let errorToThrow = null;
-
 // Crud Store su rotta pictures (private)
 async function store(req, res, next)
 {
     let { title, description, visible, categories } = matchedData(req, { onlyValidData : true });
     const userId = req.tokenOwner.id;
     const { file } = req;
+    let prismaQuery = {};
+    let errorToThrow = null;
     categories = categories ?? [];
     prismaQuery =
     {

@@ -5,31 +5,36 @@ const { formattedOutput } = require("./consoleOutput");
 
 /**
 * Oggetto contenente i parametri utilizzati dal multer middleware, a seconda della rotta in uso.
-* @typedef {Object} RoutesImagesParams
+* @typedef {Object} imgFileParams
 * @property {string} folder - Cartella di salvataggio dei files.
 * @property {string[]} validExt - Array contenente le estensioni ammesse.
 * @property {number} maxSize - Dimensioni massime ammesse per i files.
+* @property {string} fieldName - Nome del campo "file" da specificare nella request.
+* @property {boolean} imgRequired - Valore booleano che definisce l'obbligatorietà del file per la rotta in uso.
 */
-const routesImagesParams =  {
-                                "users"         :   {
-                                                        "folder"    :   "users",
-                                                        "validExt"  :   ['jpg', 'jpeg', 'png'],
-                                                        "maxSize"   :   0.5,
-                                                        "fieldName" :   "thumb"
-                                                    },   
-                                "categories"    :   {
-                                                        "folder"    :   "categories",
-                                                        "validExt"  :   ['jpg', 'jpeg'],
-                                                        "maxSize"   :   0.1,
-                                                        "fieldName" :   "thumb"
-                                                    },
-                                "pictures"      :   {
-                                                        "folder"    :   "pictures",
-                                                        "validExt"  :   ['jpg', 'jpeg', 'png', 'webp'],
-                                                        "maxSize"   :   5,
-                                                        "fieldName" :   "image"
-                                                    }
-                            };
+const imgFileParams =  {
+                            "users"         :   {
+                                                    "folder"        :   "users",
+                                                    "validExt"      :   ['jpg', 'jpeg', 'png'],
+                                                    "maxSize"       :   0.5,
+                                                    "fieldName"     :   "thumb",
+                                                    "imgRequired"   :   false
+                                                },   
+                            "categories"    :   {
+                                                    "folder"        :   "categories",
+                                                    "validExt"      :   ['jpg', 'jpeg'],
+                                                    "maxSize"       :   0.1,
+                                                    "fieldName"     :   "thumb",
+                                                    "imgRequired"   :   true
+                                                },
+                            "pictures"      :   {
+                                                    "folder"        :   "pictures",
+                                                    "validExt"      :   ['jpg', 'jpeg', 'png', 'webp'],
+                                                    "maxSize"       :   5,
+                                                    "fieldName"     :   "image",
+                                                    "imgRequired"   :   true
+                                                }
+                        };
 
 /**
  * Funzione che genera un nome file randomico ed univoco (per i file immagine)
@@ -59,18 +64,6 @@ const multerFileExtension = (file) => file.originalname.split(".").pop().toLower
  * @returns {string} - Tipo del file (image o altro)
  */
 const multerFileType = (file) => file.mimetype.split("/")[0].toLowerCase();
-
-/**
- * Restituisce la stringa identificativa della rotta che ha prodotto l'upload del file
- * @function
- * @param {Object} file - Oggetto express.request.file
- * @returns {string} - Label identificativa della cartella in cui il file è stato salvato, ovvero della rotta che ha prodotto l'upload
- */
-function returnRouteLabel(file)
-{
-    const destArray = file.destination.split("/");
-    return destArray[destArray.length - 1];
-}
 
 /**
  * Arrow function asincrona utilizzata per cancellare un file precedentemente caricato da multer e riportare l'esito dell'operazione nella server console.
@@ -103,7 +96,7 @@ const deleteFileBeforeThrow = async (file, caller) =>
 */
 function fileUploadReport(req)
 {
-    const { fileData, checkFileExtensionValidity, checkFileTypeValidity, checkFileSizeValidity } = req;
+    const { fileData } = req;
     const fileType = multerFileType(fileData);
     const fileExt = multerFileExtension(fileData);
     const uploadReportObject =    
@@ -111,25 +104,25 @@ function fileUploadReport(req)
             "File_Type"         :   {
                                         "Provided_file_type"    :   fileType,
                                         "Allowed_file_type"     :   "image",
-                                        "Is_valid_file_type"    :   checkFileTypeValidity
+                                        "Is_valid_file_type"    :   fileData.validType
                                     },
             "File_extension"    :   {
                                         "Provided_file_ext"     :   fileExt,
-                                        "Allowed_file_ext"      :   routesImagesParams[fileData.routeLabel].validExt,
-                                        "Is_valid_file_ext"     :   checkFileExtensionValidity
+                                        "Allowed_file_ext"      :   imgFileParams[fileData.dbTable].validExt,
+                                        "Is_valid_file_ext"     :   fileData.validExtension
                                     },
-            ...(checkFileSizeValidity !== undefined) && 
+            ...(fileData.validSize !== undefined) && 
             { 
                 "File_size"     :   {
                                         "Provided_file_size"    :   `${req.file.size} bytes`,
-                                        "Max_allowed_file_size" :   `${routesImagesParams[fileData.routeLabel].maxSize * 1024 * 1024} bytes - (${routesImagesParams[fileData.routeLabel].maxSize} MB)`,
-                                        "Is_valid_file_size"    :   checkFileSizeValidity
+                                        "Max_allowed_file_size" :   `${imgFileParams[fileData.dbTable].maxSize * 1024 * 1024} bytes - (${imgFileParams[fileData.dbTable].maxSize} MB)`,
+                                        "Is_valid_file_size"    :   fileData.validSize
                                     }
             },
             // Se checkFileSizeValidity è undefined significa che il file non è mai stato caricato (valore false), altrimenti, il suo valore identifica lo stato di File_uploaded, ovvero true = size confome = file caricato (essendo automaticamente true anche i precedenti due checks), false = size non conforme = file non caricato
-            "File_uploaded"     :   (checkFileSizeValidity ?? false)
+            "File_uploaded"     :   (fileData.validSize ?? false)
         };
     return uploadReportObject;
 }
 
-module.exports = { routesImagesParams, randomFileName, multerFileExtension, multerFileType, returnRouteLabel, deleteFileBeforeThrow, fileUploadReport }
+module.exports = { imgFileParams, randomFileName, multerFileExtension, multerFileType, deleteFileBeforeThrow, fileUploadReport }

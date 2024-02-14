@@ -7,6 +7,6 @@ const schemaForPictureStore = require("../../../../validationSchemas/specificSch
 
 const picturesCtrl = require("../controller/picturesPrivateController");
 
-router.post("/", imageUploader("pictures"), validationMiddleware(schemaForPictureStore), picturesCtrl.store);
+router.post("/", imageUploader, validationMiddleware(schemaForPictureStore), picturesCtrl.store);
 
 module.exports = router;

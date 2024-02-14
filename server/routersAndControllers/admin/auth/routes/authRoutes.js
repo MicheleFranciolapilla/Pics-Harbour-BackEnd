@@ -8,7 +8,7 @@ const schemaForLogIn = require("../../../../validationSchemas/specificSchemas/sc
 
 const authCtrl = require("../controller/authController");
 
-router.post("/signup", imageUploader("users", false), validationMiddleware(schemaForSignUp), authCtrl.signUp);
+router.post("/signup", imageUploader, validationMiddleware(schemaForSignUp), authCtrl.signUp);
 router.post("/login", validationMiddleware(schemaForLogIn), authCtrl.logIn);
 router.post("/checktoken", authCtrl.checkToken);
 

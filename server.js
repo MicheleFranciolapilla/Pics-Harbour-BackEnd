@@ -7,8 +7,9 @@ const express = require("express");
 // Parte pubblica
 const home = require("./server/routersAndControllers/guest/home/controller/homeController");
 const usersPublicRoutes = require("./server/routersAndControllers/guest/users/routes/usersPublicRoutes");
+// Autenticazione
+const authRoutes = require("./server/routersAndControllers/admin/auth/routes/authRoutes");
 // Parte Privata
-const authRoutes = require("./server/routersAndControllers/admin/users/routes/authRoutes");
 const usersPrivateRoutes = require("./server/routersAndControllers/admin/users/routes/usersPrivateRoutes");
 const picturesPrivateRoutes = require("./server/routersAndControllers/admin/pictures/routes/picturesPrivateRoutes");
 const categoriesPrivateRoutes = require("./server/routersAndControllers/admin/categories/routes/categoriesPrivateRoutes");
@@ -37,9 +38,9 @@ server.use(express.urlencoded({ extended : true }));
 server.get("/", home);
 server.use("/users", usersPublicRoutes);
 // Rotte di autenticazione
-server.use("/users", authRoutes);
+server.use("/auth", authRoutes);
 // Rotte private
-// La sintassi utilizzata per registrare il middleware "authorizationMiddleware" sulle rotte protette è necessaria ai fini di poter passare un argomento extra al middleware stesso quando lo si registra direttamente nella server app. La registrazione eventuale dentro un router sarebbe di tipo più semplice (vedere la sintassi utilizzata nei routers per i middlewares "imageUploader o validationMiddleware").
+// La sintassi utilizzata per registrare il middleware "authorizationMiddleware" sulle rotte protette è necessaria ai fini di poter passare un argomento extra al middleware stesso quando lo si registra direttamente nella server app. La registrazione eventuale dentro un router sarebbe di tipo più semplice (vedere la sintassi utilizzata nei routers per validationMiddleware").
 // Nel caso specifico, la sintassi è assimilabile alla seguente:
 // (req, res, next) => 
 // {

@@ -11,14 +11,13 @@ const { prismaOperator, basicSlug } = require("../../../../utilities/general");
 const { deleteFileBeforeThrow } = require("../../../../utilities/fileManagement");
 const { formattedOutput } = require("../../../../utilities/consoleOutput");
 
-let prismaQuery = {};
-let errorToThrow = null;
-
 async function store(req, res, next)
 {
     const { name } = matchedData(req, { onlyValidData : true });
     const userId = req.tokenOwner.id;
     const { file } = req;
+    let prismaQuery = {};
+    let errorToThrow = null;
     prismaQuery =
     {
         "where"     :   { "id" : userId },

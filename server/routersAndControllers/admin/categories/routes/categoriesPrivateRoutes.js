@@ -7,6 +7,6 @@ const schemaForCategoryStore = require("../../../../validationSchemas/specificSc
 
 const categoriesCtrl = require("../controller/categoriesPrivateController");
 
-router.post("/", imageUploader("categories"), validationMiddleware(schemaForCategoryStore), categoriesCtrl.store);
+router.post("/", imageUploader, validationMiddleware(schemaForCategoryStore), categoriesCtrl.store);
 
 module.exports = router;
