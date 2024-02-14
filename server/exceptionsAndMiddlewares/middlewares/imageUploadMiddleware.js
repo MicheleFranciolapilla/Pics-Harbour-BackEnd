@@ -108,12 +108,12 @@ const imageUploader = async (req, res, next) =>
         try
         {
             // Si recupera il "Content-Type" dalla request
-            const contentType = req.get("Content-Type").toLowerCase();
+            const contentType = req.get("Content-Type");
             console.log(contentType);
             if (!contentType)
                 // Se il "Content-Type" è assente si conclude con un errore,
                 throw new ErrorMulterMiddleware("Missing Content-Type into the request.", 415, "CHECK HTTP CONTENT-TYPE MIDDLEWARE");
-            if (!contentType.startsWith("multipart/form-data"))
+            if (!contentType.toLowerCase().startsWith("multipart/form-data"))
                 // se invece è presente ma non è di tipo "Multipart/form-data" si bypassano tutti i middlewares di multer e si passa direttamente alla validazione dei dati per mezzo del body parser corretto.
                 return next();
                 // nel caso in cui, invece, il "Content-Type" è di tipo "Multipart/form-data" si procede con la chiamata ai middlewares multer in sequenza sincronizzata
