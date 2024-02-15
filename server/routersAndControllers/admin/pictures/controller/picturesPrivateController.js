@@ -94,6 +94,94 @@ async function store(req, res, next)
     return next(errorToThrow);
 }
 
+async function update(req, res, next)
+{
+    // Nell'ambito dell'update della picture, bisogna tenere in conto i seguenti punti:
+    // - la foto in sè non è modificabile
+    // - sono modificabili tutti i campi "dato", incluse le categories di riferimento
+    // - è modificabile anche il titolo a patto che esso mantenga una lunghezza compresa tra il minimo e massimo consentito
+    // - ovviamente non è modificabile la userId (utente titolare della foto)
+    let { id, title, description, visible, categories } = matchedData(req, { onlyValidData : true });
+    // Si inizia verificando che l'id della picture esista effettivamente nel database, 
+    // dopodichè, in caso affermativo, si verifica che lo user titolare della foto coincida con lo user che ne sta richiedendo la modifica
+    let errorToThrow = null;
+    let prismaQuery = { "where" : { "id" : id } };
+    const pictureIdCheck = await prismaOperator(prisma, "picture", "findUnique", prismaQuery);
+    if (!pictureIdCheck.success)
+        errorToThrow = new ErrorFromDB("Service temporarily unavailable", 503, "PICTURES (private) - UPDATE");
+    else if (!pictureIdCheck.data)
+        errorToThrow = new ErrorResourceNotFound(`Id [${id}]`, "PICTURES (private) - UPDATE");
+    else
+    {
+        if (pictureIdCheck.data.userId !== req.tokenOwner.id)
+            errorToThrow = new ErrorUserNotAllowed("User not allowed to modify another user's picture", "PICTURES (private) - UPDATE");
+        else
+        {
+            categories = categories ?? [];
+            let categoriesCheck = { "success" : true, "data" : [] };
+            let missingCategories = [];
+            if (categories.length !== 0)
+            {
+                // Si verifica che tutte le categories collegate siano effettivamente esistenti nel db
+                prismaQuery =
+                {
+                    "where"     :   { "id" : { "in" : categories } },
+                    "select"    :   { "id" : true }
+                };
+                categoriesCheck = await prismaOperator(prisma, "category", "findMany", prismaQuery);
+            }
+            if (!categoriesCheck.success)
+                errorToThrow = new ErrorFromDB("Service temporarily unavailable", 503, "PICTURES (private) - UPDATE");
+            // Il seguente blocco "else if" consente di verificare quali siano le categories richieste e non esistenti (laddove ce ne siano) e, conseguentemente lanciare un errore. Avendo inizializzato a ("data" : []) l'oggetto "categoriesCheck" si ha la certezza di poter eseguire correttamente la seguente condizione sempre, senza incorrere in alcun errore logico anche nel caso in cui non siano stati richiesti collegamenti ad alcuna category.
+            else if (categoriesCheck.data.length < categories.length)
+            {
+                categories.forEach( catId =>
+                    {
+                        if (!categoriesCheck.data.some( idObject => idObject.id === catId ))
+                            missingCategories.push(catId);
+                    });
+                errorToThrow = new ErrorResourceNotFound(`Category Ids [${missingCategories}]`, "PICTURES (private) - UPDATE");
+            }
+            else
+            {
+                // Controllare perchè visible non risponde
+                console.log(visible);
+                prismaQuery =
+                {
+                    "where"     :   {   "id"            :   id},
+                    "data"      :   {
+                                        "title"         :   title ?? pictureIdCheck.data.title,
+                                        "description"   :   description ?? pictureIdCheck.data.description,
+                                        "image"         :   pictureIdCheck.data.image,
+                                        "visible"       :   (visible !== undefined) ? visible : pictureIdCheck.data.visible,
+                                        "userId"        :   pictureIdCheck.data.userId,
+                                        ...((categories.length !== 0) 
+                                            && 
+                                        {"categories"   :   {
+                                                                "connect"   :   categories.map( catId => ({ "id" : catId }))
+                                                            }})
+                                    },
+                    "include"   :   {   
+                                        "categories"    :   {
+                                                                "select"    :   { "id" : true }
+                                                            }
+                                    }
+                };
+                const updatedPicture = await prismaOperator(prisma, "picture", "update", prismaQuery);
+                if ((!updatedPicture.success) || (!updatedPicture.data))
+                    errorToThrow = new ErrorFromDB("Operation refused", 403, "PICTURES (private) - UPDATE");
+                else 
+                {
+                    const picture = updatedPicture.data;
+                    formattedOutput("PICTURES (private) - UPDATE - SUCCESS", "***** Status: 200", "***** Previous: ", pictureIdCheck.data, "***** Updated: ", picture);
+                    return res.json({ previous : {...pictureIdCheck.data}, updated : {...picture} });
+                }
+            }
+        }
+    }
+    return next(errorToThrow);
+}
+
 async function destroy(req, res, next)
 {
     const { id } = matchedData(req, { onlyValidData : true });
@@ -128,4 +216,4 @@ async function destroy(req, res, next)
     return next(errorToThrow);
 }
 
-module.exports = { store, destroy }
+module.exports = { store, update, destroy }
