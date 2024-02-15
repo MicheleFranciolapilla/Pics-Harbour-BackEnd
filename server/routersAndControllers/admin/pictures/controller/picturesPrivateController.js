@@ -5,9 +5,10 @@ const { matchedData } = require("express-validator");
 const exceptionsFolder = "../../../../exceptionsAndMiddlewares/exceptions/";
 const ErrorFromDB = require(`${exceptionsFolder}ErrorFromDB`);
 const ErrorResourceNotFound = require(`${exceptionsFolder}ErrorResourceNotFound`);
+const ErrorUserNotAllowed = require(`${exceptionsFolder}ErrorUserNotAllowed`);
 
 const { prismaOperator } = require("../../../../utilities/general");
-const { deleteFileBeforeThrow } = require("../../../../utilities/fileManagement");
+const { deleteFileBeforeThrow, buildFileObject } = require("../../../../utilities/fileManagement");
 const { formattedOutput } = require("../../../../utilities/consoleOutput");
 
 // Crud Store su rotta pictures (private)
@@ -26,7 +27,7 @@ async function store(req, res, next)
     };
     // Come visto per le rotte private su "/categories", potrebbe anche essere che lo user si sia cancellato dopo essersi loggato e che dunque non sia più presente nel database, ragion per cui si procede con il check seguente
     const userIdCheck = await prismaOperator(prisma, "user", "findUnique", prismaQuery);
-    // Si inizializzano "categoriesCheck" e "misingCategories"
+    // Si inizializzano "categoriesCheck" e "missingCategories"
     let categoriesCheck = { "success" : true, "data" : [] };
     let missingCategories = [];
     if (categories.length !== 0)
@@ -93,4 +94,38 @@ async function store(req, res, next)
     return next(errorToThrow);
 }
 
-module.exports = { store }
+async function destroy(req, res, next)
+{
+    const { id } = matchedData(req, { onlyValidData : true });
+    // Si inizia verificando che l'id della picture esista effettivamente nel database, 
+    // dopodichè, in caso affermativo, si verifica che lo user titolare della foto coincida con lo user che ne sta richiedendo la cancellazione
+    let errorToThrow = null;
+    let prismaQuery = { "where" : { "id" : id }, "select" : { "userId" : true } };
+    const pictureIdCheck = await prismaOperator(prisma, "picture", "findUnique", prismaQuery);
+    if (!pictureIdCheck.success)
+        errorToThrow = new ErrorFromDB("Service temporarily unavailable", 503, "PICTURES (private) - DESTROY");
+    else if (!pictureIdCheck.data)
+        errorToThrow = new ErrorResourceNotFound(`Id [${id}]`, "PICTURES (private) - DESTROY");
+    else
+    {
+        if (pictureIdCheck.data.userId !== req.tokenOwner.id)
+            errorToThrow = new ErrorUserNotAllowed("User not allowed to delete another user's picture", "PICTURES (private) - DESTROY");
+        else
+        {
+            prismaQuery = { "where" : { "id" : id } };
+            const pictureToDelete = await prismaOperator(prisma, "picture", "delete", prismaQuery);
+            if (!(pictureToDelete.success && pictureToDelete.data))
+                errorToThrow = new ErrorFromDB("Service temporarily unavailable", 503, "PICTURES (private) - DESTROY");
+            else
+            {
+                deleteFileBeforeThrow(buildFileObject(pictureToDelete.data.image), "PICTURES (private) - DESTROY");
+                const picture = pictureToDelete.data;
+                formattedOutput("PICTURES (private) - DESTROY - SUCCESS", "***** Status: 200", "***** Deleted Picture: ", picture);
+                return res.json({ picture });
+            }
+        }
+    }
+    return next(errorToThrow);
+}
+
+module.exports = { store, destroy }

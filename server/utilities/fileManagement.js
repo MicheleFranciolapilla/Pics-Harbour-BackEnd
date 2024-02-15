@@ -89,6 +89,30 @@ const deleteFileBeforeThrow = async (file, caller) =>
 }
 
 /**
+ * Funzione che ricostruisce un oggetto con gli stessi campi "filename", "destination", "path" dell'oggetto "file" di multer, a partire dal solo nome del file.
+ * @param {string} fileName - Nome del file (completo di estensione) per il quale si richiede la ricostruzione dell'oggetto simil-multer
+ * @returns {object} - Oggetto simil-multer, utilizzato, poi, per poter correttamente invocare la funzione "deleteFileBeforeThrow"
+ */
+const buildFileObject = (fileName) =>
+{
+    let folder = "";
+    switch (fileName[0])
+    {
+        case "U"    :   folder = "users";
+                        break;
+        case "C"    :   folder = "categories";
+                        break;
+        case "P"    :   folder = "pictures";
+                        break;
+    }
+    return  {
+                "filename"      :   fileName,
+                "destination"   :   path.join("public", "images", folder),
+                "path"          :   path.join("public", "images", folder, fileName)
+            }
+}
+
+/**
 * Funzione che restituisce il report conclusivo dell'operazione di upload del file immagine, recuperando tutti i dati dalla request
 * @function
 * @param {Object} req - express.request
@@ -125,4 +149,4 @@ function fileUploadReport(req)
     return uploadReportObject;
 }
 
-module.exports = { imgFileParams, randomFileName, multerFileExtension, multerFileType, deleteFileBeforeThrow, fileUploadReport }
+module.exports = { imgFileParams, randomFileName, multerFileExtension, multerFileType, deleteFileBeforeThrow, fileUploadReport, buildFileObject }
