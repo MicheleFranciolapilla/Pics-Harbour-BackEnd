@@ -39,6 +39,30 @@ function removeProperties(objectsArray, ...propertiesList)
 }
 
 /**
+ * Restituisce una copia dell'oggetto passato, con l'aggiunta della coppia "chiave - valore" richiesta, in posizione indicata
+ * @function
+ * @param {Object} objectToUpdate - Oggetto da copiare ed aggiornare
+ * @param {string} propertyKey - Chiave da aggiungere
+ * @param {any} propertyValue - Valore da aggiungere
+ * @param {Number} propertyPosition - Posizione della nuova coppia "chiave - valore"
+ * @returns {Object} - Oggetto aggiornato
+ */
+function addPropertyAtPosition(objectToUpdate, propertyKey, propertyValue, propertyPosition)
+{
+    let objectToReturn = {};
+    const objKeys = Object.keys(objectToUpdate);
+    const objValues = Object.values(objectToUpdate);
+    if ((propertyPosition >= 0) && (propertyPosition < objKeys.length))
+        objKeys.forEach( (key, index) =>
+            {
+                if (propertyPosition == index)
+                    objectToReturn[propertyKey] = propertyValue;
+                objectToReturn[key] = objValues[index];
+            });
+    return objectToReturn;
+}
+
+/**
  * Sostituisce tutti i raggruppamenti di spazi con spazi singoli.
  * La regular expression "/ +/g" equivale a "tutti gli spazi, anche multipli (+), globalmente (g)"
  * @param {string} stringToNormalize - Stringa da normalizzare
@@ -72,4 +96,4 @@ function upperStartingChar(normalizedStringOfWords, allFirstChars)
  */
 const basicSlug = (stringToSlug, slugChar = "-") => stringToSlug.replaceAll(" ", slugChar).toLowerCase();
 
-module.exports = { prismaOperator, removeProperties, normalizeSpaces, upperStartingChar, basicSlug }
+module.exports = { prismaOperator, removeProperties, addPropertyAtPosition, normalizeSpaces, upperStartingChar, basicSlug }

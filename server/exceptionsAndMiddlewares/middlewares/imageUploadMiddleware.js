@@ -109,7 +109,6 @@ const imageUploader = async (req, res, next) =>
         {
             // Si recupera il "Content-Type" dalla request
             const contentType = req.get("Content-Type");
-            console.log(contentType);
             if (!contentType)
                 // Se il "Content-Type" è assente si conclude con un errore,
                 throw new ErrorMulterMiddleware("Missing Content-Type into the request.", 415, "CHECK HTTP CONTENT-TYPE MIDDLEWARE");
@@ -151,9 +150,6 @@ const imageUploader = async (req, res, next) =>
     const routeMethod = req.method.toUpperCase();
     const dbTable = (req.baseUrl.toLowerCase() === "/auth") ? "users" : req.baseUrl.substring(1).toLowerCase();
     const fileParams = imgFileParams[dbTable];
-    console.log(routeMethod);
-    console.log(dbTable);
-    console.log(fileParams);
 
     await checkHTTPContentType(req, res, next);
 }

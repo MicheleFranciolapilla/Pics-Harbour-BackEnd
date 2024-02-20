@@ -1,4 +1,4 @@
-// COME GIA' DETTO NELLO SCHEMA DI VALIDAZIONE DELLA STORE SU ROTTA PRIVATA "/categories", ANCHE SU QUESTA ROTTA PRIVATA, ESSENDO L'ACCESSO MEDIATO DA UN MIDDLEWARE AUTORIZZATIVO CHE, IN CASO FAVOREVOLE, SALVA NELLA REQUEST, TRA LE ALTRE COSE, ANCHE L'ID DEL RICHIEDENTE ACCESSO, LA "userId" DEVE ESSERE RECUPERATA DIRETTAMENTE DI LI' E DUNQUE NON PIU' SOGGETTA A VALIDAZIONE
+// ESSENDO L'ACCESSO MEDIATO DA UN MIDDLEWARE AUTORIZZATIVO CHE, IN CASO FAVOREVOLE, SALVA NELLA REQUEST, TRA LE ALTRE COSE, ANCHE L'ID DEL RICHIEDENTE ACCESSO, LA "userId" DEVE ESSERE RECUPERATA DIRETTAMENTE DI LI' E DUNQUE NON PIU' SOGGETTA A VALIDAZIONE
 
 const { tablePicturesColumnTitleSize, minTitleLength, maxDescriptionLength } = require("../../utilities/variables");
 
@@ -65,7 +65,7 @@ const returnSchemaForPictureStoreOrUpdate = (isForStore) =>
                                                     },
                                 customSanitizer :   {   options         :   (value) =>  
                                                                             (value !== undefined)
-                                                                            ? (Boolean(value))
+                                                                            ? ((value === true) || (value === "true") || (value == 1))
                                                                             : undefined
                                                     }
                             },

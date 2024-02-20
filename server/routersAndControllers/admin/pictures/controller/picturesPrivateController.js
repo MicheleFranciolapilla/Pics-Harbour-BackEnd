@@ -105,15 +105,16 @@ async function update(req, res, next)
     // Si inizia verificando che l'id della picture esista effettivamente nel database, 
     // dopodichè, in caso affermativo, si verifica che lo user titolare della foto coincida con lo user che ne sta richiedendo la modifica
     let errorToThrow = null;
-    let prismaQuery = { "where" : { "id" : id } };
-    const pictureIdCheck = await prismaOperator(prisma, "picture", "findUnique", prismaQuery);
-    if (!pictureIdCheck.success)
+    let prismaQuery = { "where" : { "id" : id }, "include" : { "categories" : { "select" : { "id" : true } } } };
+    const pictureToUpdate = await prismaOperator(prisma, "picture", "findUnique", prismaQuery);
+    console.log("LOG: ",pictureToUpdate);
+    if (!pictureToUpdate.success)
         errorToThrow = new ErrorFromDB("Service temporarily unavailable", 503, "PICTURES (private) - UPDATE");
-    else if (!pictureIdCheck.data)
-        errorToThrow = new ErrorResourceNotFound(`Id [${id}]`, "PICTURES (private) - UPDATE");
+    else if (!pictureToUpdate.data)
+        errorToThrow = new ErrorResourceNotFound(`Picture Id [${id}]`, "PICTURES (private) - UPDATE");
     else
     {
-        if (pictureIdCheck.data.userId !== req.tokenOwner.id)
+        if (pictureToUpdate.data.userId !== req.tokenOwner.id)
             errorToThrow = new ErrorUserNotAllowed("User not allowed to modify another user's picture", "PICTURES (private) - UPDATE");
         else
         {
@@ -144,22 +145,18 @@ async function update(req, res, next)
             }
             else
             {
-                // Controllare perchè visible non risponde
-                console.log(visible);
                 prismaQuery =
                 {
-                    "where"     :   {   "id"            :   id},
+                    "where"     :   {   "id"            :   id },
                     "data"      :   {
-                                        "title"         :   title ?? pictureIdCheck.data.title,
-                                        "description"   :   description ?? pictureIdCheck.data.description,
-                                        "image"         :   pictureIdCheck.data.image,
-                                        "visible"       :   (visible !== undefined) ? visible : pictureIdCheck.data.visible,
-                                        "userId"        :   pictureIdCheck.data.userId,
-                                        ...((categories.length !== 0) 
-                                            && 
-                                        {"categories"   :   {
-                                                                "connect"   :   categories.map( catId => ({ "id" : catId }))
-                                                            }})
+                                        "title"         :   title ?? pictureToUpdate.data.title,
+                                        "description"   :   description ?? pictureToUpdate.data.description,
+                                        "image"         :   pictureToUpdate.data.image,
+                                        "visible"       :   (visible !== undefined) ? visible : pictureToUpdate.data.visible,
+                                        "userId"        :   pictureToUpdate.data.userId,
+                                        "categories"    :   {
+                                                                "set"   :   categories.map( catId => ({ "id" : catId }))
+                                                            }
                                     },
                     "include"   :   {   
                                         "categories"    :   {
@@ -173,8 +170,8 @@ async function update(req, res, next)
                 else 
                 {
                     const picture = updatedPicture.data;
-                    formattedOutput("PICTURES (private) - UPDATE - SUCCESS", "***** Status: 200", "***** Previous: ", pictureIdCheck.data, "***** Updated: ", picture);
-                    return res.json({ previous : {...pictureIdCheck.data}, updated : {...picture} });
+                    formattedOutput("PICTURES (private) - UPDATE - SUCCESS", "***** Status: 200", "***** Previous: ", pictureToUpdate.data, "***** Updated: ", picture);
+                    return res.json({ previous : {...pictureToUpdate.data}, updated : {...picture} });
                 }
             }
         }
@@ -193,7 +190,7 @@ async function destroy(req, res, next)
     if (!pictureIdCheck.success)
         errorToThrow = new ErrorFromDB("Service temporarily unavailable", 503, "PICTURES (private) - DESTROY");
     else if (!pictureIdCheck.data)
-        errorToThrow = new ErrorResourceNotFound(`Id [${id}]`, "PICTURES (private) - DESTROY");
+        errorToThrow = new ErrorResourceNotFound(`Picture Id [${id}]`, "PICTURES (private) - DESTROY");
     else
     {
         if (pictureIdCheck.data.userId !== req.tokenOwner.id)
