@@ -4,7 +4,6 @@ const { matchedData } = require("express-validator");
 
 const ErrorFromDB = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorFromDB");
 const ErrorResourceNotFound = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorResourceNotFound");
-const ErrorUserNotAllowed = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorUserNotAllowed");
 const ErrorRepeatedData = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorRepeatedData");
 const ErrorUnsupportedFile = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorUnsupportedFile");
 const ErrorRequestValidation = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorRequestValidation");
@@ -16,61 +15,41 @@ const { formattedOutput } = require("../../../../utilities/consoleOutput");
 async function store(req, res, next)
 {
     const { name } = matchedData(req, { onlyValidData : true });
-    const userId = req.tokenOwner.id;
     const { file } = req;
     if (!file)
-        return next(new ErrorRequestValidation(["Image file not found into the request. Be sure to set the correct Content-Type as 'multipart/form-data' in order to upload the file."], "CATEGORIES (private) - STORE"));
-    let prismaQuery = {};
+        return next(new ErrorRequestValidation("Image file not found into the request. Be sure to set the correct Content-Type as 'multipart/form-data' in order to upload the file.", "CATEGORIES (private) - STORE"));
     let errorToThrow = null;
-    prismaQuery =
+    // Superata la barriera del middleware autorizzativo, si può essere certi che lo user che ha richiesto l'operazione è un "Super Admin", esistente e loggato.
+    const nameSlug = basicSlug(name);
+    // Si verifica che non sia già presente una category con lo stesso slug
+    let prismaQuery = { "where" :   { "slug" : nameSlug } };
+    const slugCheck = await prismaOperator(prisma, "category", "findUnique", prismaQuery);
+    if (!slugCheck.success)
+        errorToThrow = new ErrorFromDB("Service temporarily unavailable", 503, "CATEGORIES (private) - STORE");
+    // Se nel db non è presente una category con lo stesso slug si può procedere con la creazione della stessa
+    else if (!slugCheck.data)
     {
-        "where"     :   { "id" : userId },
-        "select"    :   { "id" : true, "role" : true }
-    };
-    // In linea teorica, una volta superata la barriera del middleware autorizzativo, si può essere certi che lo user che ha richiesto l'operazione sia un "Super Admin" e che sia esistente e loggato, ma, ad ogni modo, eseguiamo un double check.
-    const userIdCheck = await prismaOperator(prisma, "user", "findUnique", prismaQuery);
-    if (userIdCheck.success)
-    {
-        if (!userIdCheck.data)
-            errorToThrow = new ErrorResourceNotFound(`UserId [${userId}]`, "CATEGORIES (private) - STORE");
-        else if (userIdCheck.data.role !== "Super Admin")       
-            errorToThrow = new ErrorUserNotAllowed("User not allowed to create categories", "CATEGORIES (PRIVATE) - STORE");
+        prismaQuery =
+        {
+            "data"  :   {
+                            "name"      :   name,
+                            "slug"      :   nameSlug,
+                            "thumb"     :   file.filename,
+                            "userId"    :   req.tokenOwner.id
+                        }
+        }
+        const newCategory = await prismaOperator(prisma, "category", "create", prismaQuery);
+        if ((!newCategory.success) || (!newCategory.data))
+            errorToThrow = new ErrorFromDB("Operation refused", 403, "CATEGORIES (private) - STORE");
         else
         {
-            const nameSlug = basicSlug(name);
-            // Si verifica che non sia già presente una category con lo stesso slug
-            prismaQuery = { "where" :   { "slug" : nameSlug } };
-            const slugCheck = await prismaOperator(prisma, "category", "findUnique", prismaQuery);
-            if (!slugCheck.success)
-                errorToThrow = new ErrorFromDB("Service temporarily unavailable", 503, "CATEGORIES (private) - STORE");
-            // Se nel db non è presente una category con lo stesso slug si può procedere con la creazione della stessa
-            else if (!slugCheck.data)
-            {
-                prismaQuery =
-                {
-                    "data"  :   {
-                                    "name"      :   name,
-                                    "slug"      :   nameSlug,
-                                    "thumb"     :   file.filename,
-                                    "userId"    :   userId
-                                }
-                }
-                const newCategory = await prismaOperator(prisma, "category", "create", prismaQuery);
-                if ((!newCategory.success) || (!newCategory.data))
-                    errorToThrow = new ErrorFromDB("Operation refused", 403, "CATEGORIES (private) - STORE");
-                else
-                {
-                    const category = newCategory.data;
-                    formattedOutput("CATEGORIES (private) - STORE - SUCCESS", "***** Status: 201", "***** New Category: ", category);
-                    return res.status(201).json({ category });
-                }
-            }
-            else
-                errorToThrow = new ErrorRepeatedData("slug", "CATEGORIES (private) - STORE");
-        } 
+            const category = newCategory.data;
+            formattedOutput("CATEGORIES (private) - STORE - SUCCESS", "***** Status: 201", "***** New Category: ", category);
+            return res.status(201).json({ category });
+        }
     }
     else
-        errorToThrow = new ErrorFromDB("Service temporarily unavailable", 503, "CATEGORIES (private) - STORE");
+        errorToThrow = new ErrorRepeatedData("slug", "CATEGORIES (private) - STORE");
     await deleteFileBeforeThrow(file, "CATEGORIES (private) - STORE");
     return next(errorToThrow);
 }
@@ -236,21 +215,16 @@ async function destroy(req, res, next)
         errorToThrow = new ErrorResourceNotFound(`Category Id [${id}]`, "CATEGORIES (private) - DESTROY");
     else
     {
-        // A rigor di logica, se il middleware autorizzativo ha permesso di giungere fin quì, significa che il richiedente è un super admin; ad ogni modo effettuiamo il controllo specifico, seppur ridondante
-        if (req.tokenOwner.role !== "Super Admin")
-            errorToThrow = new ErrorUserNotAllowed("User not allowed to delete categories", "CATEGORIES (PRIVATE) - DESTROY");
+        // Se il middleware autorizzativo ha permesso di giungere fin quì, significa che il richiedente è un super admin.
+        const categoryToDelete = await prismaOperator(prisma, "category", "delete", prismaQuery);
+        if (!(categoryToDelete.success && categoryToDelete.data))
+            errorToThrow = new ErrorFromDB("Service temporarily unavailable", 503, "CATEGORIES (private) - DESTROY");
         else
         {
-            const categoryToDelete = await prismaOperator(prisma, "category", "delete", prismaQuery);
-            if (!(categoryToDelete.success && categoryToDelete.data))
-                errorToThrow = new ErrorFromDB("Service temporarily unavailable", 503, "CATEGORIES (private) - DESTROY");
-            else
-            {
-                deleteFileBeforeThrow(buildFileObject(categoryToDelete.data.thumb), "CATEGORIES (private) - DESTROY");
-                const category = categoryToDelete.data;
-                formattedOutput("CATEGORIES (private) - DESTROY - SUCCESS", "***** Status: 200", "***** Deleted Category: ", category);
-                return res.json({ category });
-            }
+            deleteFileBeforeThrow(buildFileObject(categoryToDelete.data.thumb), "CATEGORIES (private) - DESTROY");
+            const category = categoryToDelete.data;
+            formattedOutput("CATEGORIES (private) - DESTROY - SUCCESS", "***** Status: 200", "***** Deleted Category: ", category);
+            return res.json({ category });
         }
     }
     return next(errorToThrow);
