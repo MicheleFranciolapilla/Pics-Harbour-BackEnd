@@ -6,6 +6,7 @@ const exceptionsFolder = "../../../../exceptionsAndMiddlewares/exceptions/";
 const ErrorFromDB = require(`${exceptionsFolder}ErrorFromDB`);
 const ErrorResourceNotFound = require(`${exceptionsFolder}ErrorResourceNotFound`);
 const ErrorUserNotAllowed = require(`${exceptionsFolder}ErrorUserNotAllowed`);
+const ErrorRequestValidation = require(`${exceptionsFolder}ErrorRequestValidation`);
 
 const { prismaOperator } = require("../../../../utilities/general");
 const { deleteFileBeforeThrow, buildFileObject } = require("../../../../utilities/fileManagement");
@@ -17,6 +18,8 @@ async function store(req, res, next)
     let { title, description, visible, categories } = matchedData(req, { onlyValidData : true });
     const userId = req.tokenOwner.id;
     const { file } = req;
+    if (!file)
+        return next(new ErrorRequestValidation(["Image file not found into the request. Be sure to set the correct Content-Type as 'multipart/form-data' in order to upload the file."], "PICTURES (private) - STORE"));
     let prismaQuery = {};
     let errorToThrow = null;
     categories = categories ?? [];
