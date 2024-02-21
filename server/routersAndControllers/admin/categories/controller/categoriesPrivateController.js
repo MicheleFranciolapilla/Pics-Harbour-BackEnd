@@ -150,7 +150,7 @@ async function update(req, res, next)
                     else
                     {
                         // In caso di successo bisognerà rimuovere dal server il vecchio file immagine
-                        deleteFileBeforeThrow(buildFileObject(categoryIdCheck.data.thumb), "CATEGORIES (private) - UPDATE (SUCCESSED)");
+                        await deleteFileBeforeThrow(buildFileObject(categoryIdCheck.data.thumb), "CATEGORIES (private) - UPDATE (SUCCESSED)");
                         responseObj["previous"] = {...categoryIdCheck.data};
                         responseObj["updated"] = {...categoryToUpdate.data};
                     }
@@ -165,7 +165,7 @@ async function update(req, res, next)
         {
             uploadReport = fileUploadReport(req);
             if (uploadReport.File_uploaded)
-                deleteFileBeforeThrow(fileData, "CATEGORIES (private) - UPDATE (NOT SUCCESSED)");
+                await deleteFileBeforeThrow(req.file, "CATEGORIES (private) - UPDATE (NOT SUCCESSED)");
         }
         return next(errorToThrow);
     }
@@ -221,7 +221,7 @@ async function destroy(req, res, next)
             errorToThrow = new ErrorFromDB("Service temporarily unavailable", 503, "CATEGORIES (private) - DESTROY");
         else
         {
-            deleteFileBeforeThrow(buildFileObject(categoryToDelete.data.thumb), "CATEGORIES (private) - DESTROY");
+            await deleteFileBeforeThrow(buildFileObject(categoryToDelete.data.thumb), "CATEGORIES (private) - DESTROY");
             const category = categoryToDelete.data;
             formattedOutput("CATEGORIES (private) - DESTROY - SUCCESS", "***** Status: 200", "***** Deleted Category: ", category);
             return res.json({ category });
