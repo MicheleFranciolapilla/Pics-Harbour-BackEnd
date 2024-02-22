@@ -29,15 +29,15 @@ const prismaCall = async (prismaInstance, model, operator, query, callerBlock) =
     }
 }
 
-const checkEmail = async (email, prismaInstance, errorType, callerBlock) =>
+const checkEmail = async (email, prismaInstance, errorType, callerBlock, itemString = "email") =>
 {
     try
     {
         const result = await prismaCall(prismaInstance, "user", "findUnique", { "where" : { "email" : email } }, callerBlock);
         if (result && (errorType === errorIfExists))
-            throw new ErrorRepeatedData("email", callerBlock);
+            throw new ErrorRepeatedData(itemString, callerBlock);
         else if (!result && (errorType === errorIfDoesntExist))
-            throw new ErrorResourceNotFound("email", callerBlock);
+            throw new ErrorResourceNotFound(itemString, callerBlock);
         else
             return result;
     }
@@ -47,4 +47,17 @@ const checkEmail = async (email, prismaInstance, errorType, callerBlock) =>
     }
 }
 
-module.exports = { noError, errorIfExists, errorIfDoesntExist, prismaCall, checkEmail }
+const getUser = async (email, prismaInstance, callerBlock) =>
+{
+    try
+    {
+        const result = await checkEmail(email, prismaInstance, errorIfDoesntExist, callerBlock, "user");
+        return result;
+    }
+    catch(error)
+    {
+        throw error;
+    }
+}
+
+module.exports = { noError, errorIfExists, errorIfDoesntExist, prismaCall, checkEmail, getUser }

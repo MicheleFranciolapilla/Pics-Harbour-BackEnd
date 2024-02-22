@@ -4,14 +4,12 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const { matchedData } = require("express-validator");
 
-const ErrorRepeatedData = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorRepeatedData");
 const ErrorFromDB = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorFromDB");
-const ErrorResourceNotFound = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorResourceNotFound");
 const ErrorInvalidData = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorInvalidData");
 
-const { noError, errorIfExists, errorIfDoesntExist } = require("../../../../utilities/prismaCalls");
-const { prismaCall, checkEmail } = require("../../../../utilities/prismaCalls");
-const { prismaOperator, removeProperties } = require("../../../../utilities/general");
+const { errorIfExists } = require("../../../../utilities/prismaCalls");
+const { prismaCall, checkEmail, getUser } = require("../../../../utilities/prismaCalls");
+const { removeProperties } = require("../../../../utilities/general");
 const { formattedOutput } = require("../../../../utilities/consoleOutput");
 const { tokenLifeTime } = require("../../../../utilities/variables");
 const { fileUploadReport, deleteFileBeforeThrow } = require("../../../../utilities/fileManagement");
@@ -88,21 +86,23 @@ async function signUp(req, res, next)
 async function logIn(req, res, next)
 {
     const { email, password } = matchedData(req, { onlyValidData : true });
-    const userToLog = await prismaOperator(prisma, "user", "findUnique", { "where" : { "email" : email } });
-    if (!userToLog.success)
-        return next(new ErrorFromDB("Service temporarily unavailable", 503, "AUTH - LOGIN"));
-    else if (!userToLog.data)
-        return next(new ErrorResourceNotFound("Email", "AUTH - LOGIN"));
-    // Se l'email esiste si prosegue verificando la correttezza della password, confrontando, mediante il metodo bcrypt.compare, la password (plain) ricevuta dal client con la password criptata ricavata dal db
-    const checkPsw = await bcrypt.compare(password, userToLog.data.password);
-    if (!checkPsw)
-        return next(new ErrorInvalidData("password", "AUTH - LOGIN"));
-    // Se la password è corretta si prosegue con l'ottenimento del jwt
-    const user = userToLog.data;
-    removeProperties([user], "password");
-    const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn : tokenLifeTime });
-    formattedOutput("AUTH - LOGIN - SUCCESS", "***** Status: 200", "***** Logged user: ", user, "***** Token: ", token);
-    return res.json({ user, token });
+    try
+    {
+        const user = await getUser(email, prisma, "AUTH - LOGIN");
+        // Se l'email esiste si prosegue verificando la correttezza della password, confrontando, mediante il metodo bcrypt.compare, la password (plain) ricevuta dal client con la password criptata ricavata dal db
+        const checkPsw = await bcrypt.compare(password, user.password);
+        if (!checkPsw)
+            throw new ErrorInvalidData("password", "AUTH - LOGIN");
+        // Se la password è corretta si prosegue con l'ottenimento del jwt
+        removeProperties([user], "password");
+        const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn : tokenLifeTime });
+        formattedOutput("AUTH - LOGIN - SUCCESS", "***** Status: 200", "***** Logged user: ", user, "***** Token: ", token);
+        return res.json({ user, token });
+    }
+    catch(error)
+    {
+        return next(error);
+    }
 }
 
 /**

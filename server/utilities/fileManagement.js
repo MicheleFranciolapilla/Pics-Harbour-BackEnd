@@ -85,7 +85,7 @@ const deleteFileBeforeThrow = async (file, caller) =>
     {
         success = false;
     }
-    formattedOutput(`FILE DELETION BY ${caller}`, `File to delete:   ${file.filename}`, `File folder:   ${file.destination}`, success ? "File successfully deleted" : "File not deleted, <<< DELETE IT MANUALLY >>>");
+    formattedOutput(`FILE DELETED BY ${caller}`, `File to delete:   ${file.filename}`, `File folder:   ${file.destination}`, success ? "File successfully deleted" : "File not deleted, <<< DELETE IT MANUALLY >>>");
 }
 
 /**
