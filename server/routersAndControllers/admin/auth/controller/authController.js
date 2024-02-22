@@ -9,6 +9,8 @@ const ErrorFromDB = require("../../../../exceptionsAndMiddlewares/exceptions/Err
 const ErrorResourceNotFound = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorResourceNotFound");
 const ErrorInvalidData = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorInvalidData");
 
+const { noError, errorIfExists, errorIfDoesntExist } = require("../../../../utilities/prismaCalls");
+const { prismaCall, checkEmail } = require("../../../../utilities/prismaCalls");
 const { prismaOperator, removeProperties } = require("../../../../utilities/general");
 const { formattedOutput } = require("../../../../utilities/consoleOutput");
 const { tokenLifeTime } = require("../../../../utilities/variables");
@@ -26,76 +28,51 @@ const { fileUploadReport, deleteFileBeforeThrow } = require("../../../../utiliti
  */
 async function signUp(req, res, next)
 {
-    const { name, surname, email, password } = matchedData(req, { onlyValidData : true });
     // Nella rotta "/auth/signup" è previsto, facoltativamente, anche il caricamente del file immagine della "thumb".
     // In questo punto del processo, oltre ad avere i dati già validati, ci si può trovare in una delle seguenti situazioni:
     // A - Non è stato richiesto alcun caricamento del file della thumb
     // B - E' stato tentato il caricamento del file della thumb ma, poichè non valido in termini di estensione e/o tipo, non è mai stato salvato nel server.
     // C - E' stato tentato il caricamento del file della thumb ma, poichè non valido per la dimensione eccessiva, è stato rimosso dopo il salvataggio.
     // D - Il file della thumb è stato correttamente caricato nel server.
-    // ***************
-    // Si recupera l'oggetto "fileData" dalla request
-    // Se "fileData" non esiste si ricade nel caso A
-    // altrimenti si ricade in uno dei casi B,C e D
+    const { name, surname, email, password } = matchedData(req, { onlyValidData : true });
     const { fileData } = req;
-    let uploadReport = null;
     let thumb = null;
     if (fileData)
+    // Casi B, C o D
+        if (fileUploadReport(req).File_uploaded)
+        // Caso D
+            thumb = req.file.filename;
+    try
     {
-        // Casi B,C,D
-        // Si genera un upload report
-        uploadReport = fileUploadReport(req);
-        // Se il campo "File_uploaded" è true, si recupera il nome del file salvato per memorizzarlo nel db
-        if (uploadReport.File_uploaded)
-        {
-            // Caso D
-            const { file } = req;
-            thumb = file.filename;
-        }
-    }
-    let errorToThrow = null;
-    // Verifica di non esistenza dell'email nel database
-    // Si predilige il metodo findUnique a count poichè più rapido in caso di esistenza
-    let prismaQuery = { "where" : { "email" : email } };
-    const checkEmailExistence = await prismaOperator(prisma, "user", "findUnique", prismaQuery);
-    // Caso in cui sia stato lanciato un errore:
-    if (!checkEmailExistence.success)
-        errorToThrow = new ErrorFromDB("Service temporarily unavailable", 503, "AUTH - SIGNUP");
-    // Caso in cui l'email sia già presente nel database
-    else if (checkEmailExistence.data)
-        errorToThrow = new ErrorRepeatedData("email", "AUTH - SIGNUP");
-    // Caso in cui l'email non è già presente nel db
-    else
-    {
+        await checkEmail(email, prisma, errorIfExists, "AUTH - SIGNUP");
         const hashedPsw = await bcrypt.hash(password, parseInt(process.env.BCRYPT_SALT_ROUNDS));
-        prismaQuery =   
-            {
-                "data"  :   {
-                                "name"      :   name,
-                                "surname"   :   surname,
-                                "email"     :   email,
-                                "password"  :   hashedPsw,
-                                "thumb"     :   thumb
-                            }
-            };
-        const newUser = await prismaOperator(prisma, "user", "create", prismaQuery);
-        // Si è scelto di unificare l'errore "Operation refused" anche per l'errore da catch ("Service temporarily unavailable") nell'ipotesi, non testata, di insufficiente spazio nel db
-        if ((!newUser.success) || (!newUser.data))
-            errorToThrow = new ErrorFromDB("Operation refused", 403, "AUTH - SIGNUP");
-        else
+        const prismaQuery =
         {
-            // Se l'operazione va a buon fine si restituisce il record salvato (senza password) ed il token jwt
-            const user = newUser.data;
-            removeProperties([user], "password");
-            const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn : tokenLifeTime });
-            formattedOutput("AUTH - SIGNUP - SUCCESS", "***** Status: 201", "***** New User: ", user, "***** Token: ", token);
-            return res.status(201).json({ user, token });
-        }
+            "data"  :   {
+                            "name"      :   name,
+                            "surname"   :   surname,
+                            "email"     :   email,
+                            "password"  :   hashedPsw,
+                            "thumb"     :   thumb
+                        }
+        };
+        const user = await prismaCall(prisma, "user", "create", prismaQuery, "AUTH - SIGNUP");
+        if (!user)
+            throw new ErrorFromDB("Operation refused", 403, "AUTH - SIGNUP");
+        // Se l'operazione di creazione nuovo utente va a buon fine si restituisce il record salvato (senza password) ed il token jwt
+        removeProperties([user], "password");
+        const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn : tokenLifeTime });
+        formattedOutput("AUTH - SIGNUP - SUCCESS", "***** Status: 201", "***** New User: ", user, "***** Token: ", token);
+        return res.status(201).json({ user, token });
     }
-    // Se non si è concluso positivamente, allora si termina con l'errore settato ma prima si cancella il file, laddove presente
-    if (thumb)
-        deleteFileBeforeThrow(req.file, "AUTH - SIGNUP");
-    return next(errorToThrow);
+    catch(error)
+    {
+        if (thumb)
+        // Caso D
+        // Se ci sono stati errori tali da non consentire la creazione del nuovo utente, prima di lanciarli, si rimuove l'eventuale file immagine dal server
+            await deleteFileBeforeThrow(req.file, "AUTH - SIGNUP");
+        return next(error);
+    }
 }
 
 /**

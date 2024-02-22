@@ -1,25 +1,50 @@
+const noError = 0;
+const errorIfExists = 1;
+const errorIfDoesntExist = 2;
+
+const ErrorFromDB = require("../exceptionsAndMiddlewares/exceptions/ErrorFromDB");
+const ErrorRepeatedData = require("../exceptionsAndMiddlewares/exceptions/ErrorRepeatedData");
+const ErrorResourceNotFound = require("../exceptionsAndMiddlewares/exceptions/ErrorResourceNotFound");
+
 /**
  * Funzione delegata ad eseguire operazioni su database.
- * Questa funzione è stata pensata principalmente per alleggerire il codice dai tanti blocchi try/catch
  * @function
  * @async
  * @param {Object} prismaInstance - Istanza Prisma Client
  * @param {String} model - Nome del modello Prisma su cui operare
  * @param {String} operator - Nome del metodo Prisma da utilizzare (esempio: findUnique, findFirst, findMany, ...)
  * @param {Object} query - Query da passare al metodo Prisma per interrogare il database
- * @returns {Promise<{ outcome: string, data: any }>} - Promise che si risolve con un oggetto le cui proprietà riportano l'esito (outcome) ed il risultato (data = dati ricevuti o errore generato)
- */
-async function prismaOperator(prismaInstance, model, operator, query)
+ * @param {string} callerBlock - Stringa identificativa del blocco chiamante
+ * @returns {Promise<any>} - Promise che si risolve con i dati ricevuti o generando un errore specifico */
+const prismaCall = async (prismaInstance, model, operator, query, callerBlock) => 
 {
     try
     {
         const result = await prismaInstance[model][operator](query);
-        return { "success" : true, "data" : result };
+        return result;
     }
     catch(error)
     {
-        return { "success" : false, "data" : error };
+        throw new ErrorFromDB("Service temporarily unavailable", 503, callerBlock);
     }
 }
 
-module.exports = { prismaOperator }
+const checkEmail = async (email, prismaInstance, errorType, callerBlock) =>
+{
+    try
+    {
+        const result = await prismaCall(prismaInstance, "user", "findUnique", { "where" : { "email" : email } }, callerBlock);
+        if (result && (errorType === errorIfExists))
+            throw new ErrorRepeatedData("email", callerBlock);
+        else if (!result && (errorType === errorIfDoesntExist))
+            throw new ErrorResourceNotFound("email", callerBlock);
+        else
+            return result;
+    }
+    catch(error)
+    {
+        throw error;
+    }
+}
+
+module.exports = { noError, errorIfExists, errorIfDoesntExist, prismaCall, checkEmail }
