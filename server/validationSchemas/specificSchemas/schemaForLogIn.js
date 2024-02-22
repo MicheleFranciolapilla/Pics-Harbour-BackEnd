@@ -1,9 +1,12 @@
-const { returnSchemaForEmailAndPsw } = require("../generalSchemas/schemaForEmailAndPsw");
-
-const schemaForEmailAndPsw = returnSchemaForEmailAndPsw();
+const { returnSchemaForEmail } = require("../generalSchemas/schemaForEmail");
+const { returnSchemaForPassword } = require("../generalSchemas/schemaForPassword");
 
 /**
 * @type { import("express-validator").Schema }
 */
 
-module.exports =    { ...schemaForEmailAndPsw }
+module.exports =    
+{ 
+    ...returnSchemaForEmail(),
+    ...returnSchemaForPassword("password")
+}
