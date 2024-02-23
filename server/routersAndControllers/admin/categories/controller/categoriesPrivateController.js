@@ -1,15 +1,11 @@
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
 const { matchedData } = require("express-validator");
 
-const ErrorFromDB = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorFromDB");
-const ErrorResourceNotFound = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorResourceNotFound");
 const ErrorUnsupportedFile = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorUnsupportedFile");
 const ErrorRequestValidation = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorRequestValidation");
 
 const { errorIfExists, errorIfDoesntExist } = require("../../../../utilities/prismaCalls");
-const { checkSlug, createRecord, updateRecord, getUniqueItem } = require("../../../../utilities/prismaCalls");
-const { prismaOperator, basicSlug, removeProperties } = require("../../../../utilities/general");
+const { checkSlug, createRecord, updateRecord, deleteRecord, getUniqueItem } = require("../../../../utilities/prismaCalls");
+const { basicSlug, removeProperties } = require("../../../../utilities/general");
 const { deleteFileBeforeThrow, buildFileObject, fileUploadReport } = require("../../../../utilities/fileManagement");
 const { formattedOutput } = require("../../../../utilities/consoleOutput");
 
@@ -159,29 +155,18 @@ async function destroy(req, res, next)
 {
     // La cancellazione della categoria è permessa ai soli "Super Admin", a prescindere che il richiedente sia l'effettivo creatore o ultimo modificatore della stessa.
     const { id } = matchedData(req, { onlyValidData : true });
-    let errorToThrow = null;
-    let prismaQuery = { "where" : { "id" : id } };
-    // Si inizia verificando che la categoria esista
-    const categoryIdCheck = await prismaOperator(prisma, "category", "findUnique", prismaQuery);
-    if (!categoryIdCheck.success)
-        errorToThrow = new ErrorFromDB("Service temporarily unavailable", 503, "CATEGORIES (private) - DESTROY");
-    else if (!categoryIdCheck.data)
-        errorToThrow = new ErrorResourceNotFound(`Category Id [${id}]`, "CATEGORIES (private) - DESTROY");
-    else
+    // Il controllo di esistenza e la generazione degli eventuali, conseguenti errori, vengono effettuati direttamente all'interno della funzione "deleteRecord"
+    try
     {
-        // Se il middleware autorizzativo ha permesso di giungere fin quì, significa che il richiedente è un super admin.
-        const categoryToDelete = await prismaOperator(prisma, "category", "delete", prismaQuery);
-        if (!(categoryToDelete.success && categoryToDelete.data))
-            errorToThrow = new ErrorFromDB("Service temporarily unavailable", 503, "CATEGORIES (private) - DESTROY");
-        else
-        {
-            await deleteFileBeforeThrow(buildFileObject(categoryToDelete.data.thumb), "CATEGORIES (private) - DESTROY");
-            const category = categoryToDelete.data;
-            formattedOutput("CATEGORIES (private) - DESTROY - SUCCESS", "***** Status: 200", "***** Deleted Category: ", category);
-            return res.json({ category });
-        }
+        const category = await deleteRecord("category", { "where" : { "id" : id } }, "CATEGORIES (private) - DESTROY", `Category Id [${id}]`);
+        await deleteFileBeforeThrow(buildFileObject(category.thumb), "CATEGORIES (private) - DESTROY");
+        formattedOutput("CATEGORIES (private) - DESTROY - SUCCESS", "***** Status: 200", "***** Deleted Category: ", category);
+        return res.json({ category });
     }
-    return next(errorToThrow);
+    catch(error)
+    {
+        return next(error);
+    }
 }
 
 module.exports = { store, update, destroy }

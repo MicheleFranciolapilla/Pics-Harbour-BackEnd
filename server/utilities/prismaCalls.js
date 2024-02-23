@@ -63,6 +63,20 @@ const updateRecord = async (model, query, callerBlock) =>
     }
 }
 
+const deleteRecord = async (model, query, callerBlock, stringForErrorMessage) =>
+{
+    try
+    {
+        await getUniqueItem(model, query, errorIfDoesntExist, callerBlock, stringForErrorMessage);
+        const result = await prismaCall(model, "delete", query, callerBlock);
+        return result;
+    }
+    catch(error)
+    {
+        throw error;
+    }
+}
+
 const getUniqueItem = async (model, query, errorType, callerBlock, stringForErrorMessage) =>
 {
     try
@@ -120,4 +134,4 @@ const checkSlug = async (slug, errorType, callerBlock) =>
     }
 }
 
-module.exports = { noError, errorIfExists, errorIfDoesntExist, prismaCall, createRecord, updateRecord, getUniqueItem, getUser, checkEmail, checkSlug }
+module.exports = { noError, errorIfExists, errorIfDoesntExist, prismaCall, createRecord, updateRecord, deleteRecord, getUniqueItem, getUser, checkEmail, checkSlug }
