@@ -2,13 +2,11 @@ const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const { matchedData } = require("express-validator");
 
-const ErrorFromDB = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorFromDB");
 const ErrorResourceNotFound = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorResourceNotFound");
 const ErrorUserNotAllowed = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorUserNotAllowed");
 const ErrorRequestValidation = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorRequestValidation");
 
 const { findAllCategories, createRecord, checkPictureOwnership, updateRecord, deletePictureIfOwner } = require("../../../../utilities/prismaCalls");
-const { prismaOperator } = require("../../../../utilities/general");
 const { deleteFileBeforeThrow, buildFileObject } = require("../../../../utilities/fileManagement");
 const { formattedOutput } = require("../../../../utilities/consoleOutput");
 
