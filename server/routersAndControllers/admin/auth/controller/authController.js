@@ -1,14 +1,11 @@
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const { matchedData } = require("express-validator");
 
-const ErrorFromDB = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorFromDB");
 const ErrorInvalidData = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorInvalidData");
 
 const { errorIfExists } = require("../../../../utilities/prismaCalls");
-const { prismaCall, checkEmail, getUser } = require("../../../../utilities/prismaCalls");
+const { checkEmail, createRecord, getUser } = require("../../../../utilities/prismaCalls");
 const { removeProperties } = require("../../../../utilities/general");
 const { formattedOutput } = require("../../../../utilities/consoleOutput");
 const { tokenLifeTime } = require("../../../../utilities/variables");
@@ -42,21 +39,10 @@ async function signUp(req, res, next)
             thumb = req.file.filename;
     try
     {
-        await checkEmail(email, prisma, errorIfExists, "AUTH - SIGNUP");
+        await checkEmail(email, errorIfExists, "AUTH - SIGNUP");
         const hashedPsw = await bcrypt.hash(password, parseInt(process.env.BCRYPT_SALT_ROUNDS));
-        const prismaQuery =
-        {
-            "data"  :   {
-                            "name"      :   name,
-                            "surname"   :   surname,
-                            "email"     :   email,
-                            "password"  :   hashedPsw,
-                            "thumb"     :   thumb
-                        }
-        };
-        const user = await prismaCall(prisma, "user", "create", prismaQuery, "AUTH - SIGNUP");
-        if (!user)
-            throw new ErrorFromDB("Operation refused", 403, "AUTH - SIGNUP");
+        const prismaQuery = { "data" : { "name" : name, "surname" : surname, "email" : email, "password" : hashedPsw, "thumb" : thumb } };
+        const user = await createRecord("user", prismaQuery, "AUTH - SIGNUP");
         // Se l'operazione di creazione nuovo utente va a buon fine si restituisce il record salvato (senza password) ed il token jwt
         removeProperties([user], "password");
         const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn : tokenLifeTime });
@@ -88,7 +74,7 @@ async function logIn(req, res, next)
     const { email, password } = matchedData(req, { onlyValidData : true });
     try
     {
-        const user = await getUser(email, prisma, "AUTH - LOGIN");
+        const user = await getUser(email, "AUTH - LOGIN");
         // Se l'email esiste si prosegue verificando la correttezza della password, confrontando, mediante il metodo bcrypt.compare, la password (plain) ricevuta dal client con la password criptata ricavata dal db
         const checkPsw = await bcrypt.compare(password, user.password);
         if (!checkPsw)
