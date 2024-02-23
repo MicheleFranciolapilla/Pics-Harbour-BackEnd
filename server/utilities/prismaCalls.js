@@ -164,7 +164,36 @@ const deletePictureIfOwner = async (pictureId, userId, callerBlock) =>
     }
 }
 
+const findAllCategories = async (categoriesToFind, callerBlock) =>
+{
+    let found = [];
+    let missing = [];
+    let query = 
+    {
+        "where"     :   { "id" : { "in" : categoriesToFind } },
+        "select"    :   { "id" : true }
+    }
+    try
+    {
+        if (categoriesToFind.length !== 0)
+        {
+            found = await prismaCall("category", "findMany", query, callerBlock);
+            if (found.length < categoriesToFind.length)
+                categoriesToFind.forEach( catId =>
+                    {
+                        if (!found.some( foundId => foundId.id === catId))
+                            missing.push(catId);
+                    });
+        }
+        return { "foundCategories" : found, "missingCategories" : missing };
+    }
+    catch(error)
+    {
+        throw error;
+    }
+}
+
 module.exports = 
 {   noError, errorIfExists, errorIfDoesntExist, 
-    prismaCall, createRecord, updateRecord, deleteRecord, getUniqueItem, getUser, checkEmail, checkSlug, checkPictureOwnership, deletePictureIfOwner
+    prismaCall, createRecord, updateRecord, deleteRecord, getUniqueItem, getUser, checkEmail, checkSlug, checkPictureOwnership, deletePictureIfOwner, findAllCategories
 }
