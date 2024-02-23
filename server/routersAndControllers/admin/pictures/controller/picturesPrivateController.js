@@ -2,12 +2,12 @@ const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const { matchedData } = require("express-validator");
 
-const exceptionsFolder = "../../../../exceptionsAndMiddlewares/exceptions/";
-const ErrorFromDB = require(`${exceptionsFolder}ErrorFromDB`);
-const ErrorResourceNotFound = require(`${exceptionsFolder}ErrorResourceNotFound`);
-const ErrorUserNotAllowed = require(`${exceptionsFolder}ErrorUserNotAllowed`);
-const ErrorRequestValidation = require(`${exceptionsFolder}ErrorRequestValidation`);
+const ErrorFromDB = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorFromDB");
+const ErrorResourceNotFound = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorResourceNotFound");
+const ErrorUserNotAllowed = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorUserNotAllowed");
+const ErrorRequestValidation = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorRequestValidation");
 
+const { checkPictureOwnership, deletePictureIfOwner } = require("../../../../utilities/prismaCalls");
 const { prismaOperator } = require("../../../../utilities/general");
 const { deleteFileBeforeThrow, buildFileObject } = require("../../../../utilities/fileManagement");
 const { formattedOutput } = require("../../../../utilities/consoleOutput");
@@ -185,35 +185,21 @@ async function update(req, res, next)
 async function destroy(req, res, next)
 {
     const { id } = matchedData(req, { onlyValidData : true });
-    // Si inizia verificando che l'id della picture esista effettivamente nel database, 
-    // dopodichè, in caso affermativo, si verifica che lo user titolare della foto coincida con lo user che ne sta richiedendo la cancellazione
-    let errorToThrow = null;
-    let prismaQuery = { "where" : { "id" : id }, "select" : { "userId" : true } };
-    const pictureIdCheck = await prismaOperator(prisma, "picture", "findUnique", prismaQuery);
-    if (!pictureIdCheck.success)
-        errorToThrow = new ErrorFromDB("Service temporarily unavailable", 503, "PICTURES (private) - DESTROY");
-    else if (!pictureIdCheck.data)
-        errorToThrow = new ErrorResourceNotFound(`Picture Id [${id}]`, "PICTURES (private) - DESTROY");
-    else
+    // Viene eseguita la funzione "deletePictureIfOwner", la quale esegue, in ordine, i seguenti tasks:
+    // verifica che l'id fornito corrisponda ad una picture esistente, altrimenti genera un errore,
+    // verifica che il richiedente la cancellazione sia l'effettivo titolare della picture da cancellare, altrimenti genera un errore,
+    // in assenza di errori procede alla cancellazione e restituisce il record cancellato
+    try
     {
-        if (pictureIdCheck.data.userId !== req.tokenOwner.id)
-            errorToThrow = new ErrorUserNotAllowed("User not allowed to delete another user's picture", "PICTURES (private) - DESTROY");
-        else
-        {
-            prismaQuery = { "where" : { "id" : id } };
-            const pictureToDelete = await prismaOperator(prisma, "picture", "delete", prismaQuery);
-            if (!(pictureToDelete.success && pictureToDelete.data))
-                errorToThrow = new ErrorFromDB("Service temporarily unavailable", 503, "PICTURES (private) - DESTROY");
-            else
-            {
-                deleteFileBeforeThrow(buildFileObject(pictureToDelete.data.image), "PICTURES (private) - DESTROY");
-                const picture = pictureToDelete.data;
-                formattedOutput("PICTURES (private) - DESTROY - SUCCESS", "***** Status: 200", "***** Deleted Picture: ", picture);
-                return res.json({ picture });
-            }
-        }
+        const picture = await deletePictureIfOwner(id, req.tokenOwner.id, "PICTURES (private) - DESTROY");
+        await deleteFileBeforeThrow(buildFileObject(picture.image), "PICTURES (private) - DESTROY");
+        formattedOutput("PICTURES (private) - DESTROY - SUCCESS", "***** Status: 200", "***** Deleted Picture: ", picture);
+        return res.json({ picture });
     }
-    return next(errorToThrow);
+    catch(error)
+    {
+        return next(error);
+    }
 }
 
 module.exports = { store, update, destroy }

@@ -7,6 +7,7 @@ const errorIfDoesntExist = 2;
 const ErrorFromDB = require("../exceptionsAndMiddlewares/exceptions/ErrorFromDB");
 const ErrorRepeatedData = require("../exceptionsAndMiddlewares/exceptions/ErrorRepeatedData");
 const ErrorResourceNotFound = require("../exceptionsAndMiddlewares/exceptions/ErrorResourceNotFound");
+const ErrorUserNotAllowed = require("../exceptionsAndMiddlewares/exceptions/ErrorUserNotAllowed");
 
 /**
  * Funzione delegata ad eseguire operazioni su database.
@@ -63,7 +64,7 @@ const updateRecord = async (model, query, callerBlock) =>
     }
 }
 
-const deleteRecord = async (model, query, callerBlock, stringForErrorMessage) =>
+const deleteRecord = async (model, query, callerBlock, stringForErrorMessage = "") =>
 {
     try
     {
@@ -134,4 +135,36 @@ const checkSlug = async (slug, errorType, callerBlock) =>
     }
 }
 
-module.exports = { noError, errorIfExists, errorIfDoesntExist, prismaCall, createRecord, updateRecord, deleteRecord, getUniqueItem, getUser, checkEmail, checkSlug }
+const checkPictureOwnership = async (pictureId, userId, callerBlock) =>
+{
+    try
+    {
+        const picture = await getUniqueItem("picture", { "where" : { "id" : pictureId } }, errorIfDoesntExist, callerBlock, `Picture Id [${pictureId}]`);
+        return (picture.userId == userId);
+    }
+    catch(error)
+    {
+        throw error;
+    }
+}
+
+const deletePictureIfOwner = async (pictureId, userId, callerBlock) =>
+{
+    try
+    {
+        const ownership = await checkPictureOwnership(pictureId, userId, callerBlock);
+        if (!ownership)
+            throw new ErrorUserNotAllowed("User not allowed to delete another user's picture", callerBlock);
+        const result = await prismaCall("picture", "delete", { "where" : { "id" : pictureId } }, callerBlock);
+        return result;
+    }
+    catch(error)
+    {
+        throw error;
+    }
+}
+
+module.exports = 
+{   noError, errorIfExists, errorIfDoesntExist, 
+    prismaCall, createRecord, updateRecord, deleteRecord, getUniqueItem, getUser, checkEmail, checkSlug, checkPictureOwnership, deletePictureIfOwner
+}
