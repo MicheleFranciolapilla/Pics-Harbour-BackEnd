@@ -42,7 +42,7 @@ function tokenVerifier(req, res, next)
 
 /**
  * Middleware per la verifica del ruolo dell'utente.
- * Verifica che l'utente richiedente abbia un "rango" almeno uguale a quello richiesto per l'accesso all'operazione, nel qual caso consente la prosecuzione; 
+ * Verifica che l'utente richiedente abbia il "rango" richiesto per l'accesso all'operazione, nel qual caso consente la prosecuzione; 
  * in caso contrario lancia un errore specifico.
  * @param {Object} req 
  * @param {Object} res 
@@ -53,7 +53,7 @@ function roleVerifier(req, res, next)
 {
     const { role } = req.tokenOwner;
     const { roleToAllow } = req;
-    if (returnRoleData(role).rank >= returnRoleData(roleToAllow).rank)
+    if (returnRoleData(role).rank == returnRoleData(roleToAllow).rank)
     {
         formattedOutput("AUTHORIZATION MIDDLEWARE - USER ALLOWED TO PROCEED", `***** User Id: ${req.tokenOwner.id}`, `***** User Role: ${role}`);
         return next();
@@ -65,9 +65,9 @@ function roleVerifier(req, res, next)
 /**
  * Middleware di autorizzazione.
  * Combina i middlewares tokenVerifier e roleVerifier per garantire che l'utente abbia le autorizzazioni necessarie.
- * Accetta un parametro extra, "roleToAllow", che rappresenta il ruolo minimo richiesto per l'accesso alla route.
+ * Accetta un parametro extra, "roleToAllow", che rappresenta il ruolo richiesto per l'accesso alla route.
  * Aggiunge anche l'informazione "roleToAllow" all'oggetto req per uso successivo, se necessario.
- * @param {string} roleToAllow - Ruolo minimo richiesto per l'accesso alla rotta
+ * @param {string} roleToAllow - Ruolo richiesto per l'accesso alla rotta
  * @returns {Function} - Middleware anonimo con chiamata ai due middlewares tokenVerifier e roleVerifier
  */
 // N.B. La funzione anonima (middleware) restituito in prima battuta da authorizationMiddleware rappresenta quello riportato in coda al middleware in server.js

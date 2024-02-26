@@ -22,6 +22,7 @@ model User {
   password    String    @db.VarChar(60)
   // Una funzione ad hoc si occuperà di rinominare i files immagine movimentati da Multer in maniera univoca, utilizzando, nel nome, il getTime, unitamente a qualche carattere alfabetico randomico. Nello sviluppo dell'API in locale sarà sufficiente un solo carattere alfabetico ad inizio stringa, mentre in un'eventuale sviluppo online si potrebbero utilizzare più caratteri alfabetici randomici. Un size massimo impostato a 25 caratteri consente abbondantemente di rinominare il file univocamente, estensione inclusa.
   thumb       String?   @db.VarChar(25)
+  website     String?   @db.VarChar(255)
   // Relazione ONE TO MANY con tabella Pictures
   pictures    Picture[]
   // Relazione ONE TO MANY con tabella Categories

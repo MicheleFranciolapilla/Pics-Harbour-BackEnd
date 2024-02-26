@@ -1,6 +1,7 @@
 const { returnSchemaForRegularStrings } = require("../generalSchemas/schemaForRegularStrings");
 const { returnSchemaForEmail } = require("../generalSchemas/schemaForEmail");
 const { returnSchemaForPassword } = require("../generalSchemas/schemaForPassword");
+const { returnSchemaForUrl } = require("../generalSchemas/schemaForUrl");
 const { tableUsersColumnNameSize, tableUsersColumnSurnameSize, minUsersNameLength, minUsersSurnameLength } = require("../../utilities/variables");
 
 const schemaForName = returnSchemaForRegularStrings("name", minUsersNameLength, tableUsersColumnNameSize, false, true);
@@ -13,6 +14,7 @@ module.exports =    {
                         ...schemaForName,
                         ...schemaForSurname,
                         ...returnSchemaForEmail(),
-                        ...returnSchemaForPassword("password")
+                        ...returnSchemaForPassword("password"),
+                        ...returnSchemaForUrl()
                     }
 

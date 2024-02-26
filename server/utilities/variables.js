@@ -11,6 +11,7 @@ const tokenLifeTime = "1h";
 const tableUsersColumnNameSize = 20;
 const tableUsersColumnSurnameSize = 30;
 const tableUsersColumnEmailSize = 100;
+const tableUsersColumnWebSite = 255;
 const tablePicturesColumnTitleSize = 50;
 const tableCategoriesColumnNameSize = 30;
 const minUsersNameLength = 2;
@@ -28,6 +29,7 @@ module.exports =
     tableUsersColumnNameSize, 
     tableUsersColumnSurnameSize, 
     tableUsersColumnEmailSize,
+    tableUsersColumnWebSite,
     tablePicturesColumnTitleSize,
     tableCategoriesColumnNameSize,
     minUsersNameLength,

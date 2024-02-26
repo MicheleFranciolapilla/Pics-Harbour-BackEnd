@@ -4,8 +4,7 @@ const { matchedData } = require("express-validator");
 
 const ErrorInvalidData = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorInvalidData");
 
-const { errorIfExists } = require("../../../../utilities/prismaCalls");
-const { checkEmail, createRecord, getUser } = require("../../../../utilities/prismaCalls");
+const { errorIfExists, checkEmail, createRecord, getUser, updateRecord } = require("../../../../utilities/prismaCalls");
 const { removeProperties } = require("../../../../utilities/general");
 const { formattedOutput } = require("../../../../utilities/consoleOutput");
 const { tokenLifeTime } = require("../../../../utilities/variables");
@@ -29,7 +28,7 @@ async function signUp(req, res, next)
     // B - E' stato tentato il caricamento del file della thumb ma, poichè non valido in termini di estensione e/o tipo, non è mai stato salvato nel server.
     // C - E' stato tentato il caricamento del file della thumb ma, poichè non valido per la dimensione eccessiva, è stato rimosso dopo il salvataggio.
     // D - Il file della thumb è stato correttamente caricato nel server.
-    const { name, surname, email, password } = matchedData(req, { onlyValidData : true });
+    const { name, surname, email, password, website } = matchedData(req, { onlyValidData : true });
     const { fileData } = req;
     let thumb = null;
     if (fileData)
@@ -41,7 +40,7 @@ async function signUp(req, res, next)
     {
         await checkEmail(email, errorIfExists, "AUTH - SIGNUP");
         const hashedPsw = await bcrypt.hash(password, parseInt(process.env.BCRYPT_SALT_ROUNDS));
-        const prismaQuery = { "data" : { "name" : name, "surname" : surname, "email" : email, "password" : hashedPsw, "thumb" : thumb } };
+        const prismaQuery = { "data" : { "name" : name, "surname" : surname, "email" : email, "password" : hashedPsw, "thumb" : thumb, "website" : website } };
         const user = await createRecord("user", prismaQuery, "AUTH - SIGNUP");
         // Se l'operazione di creazione nuovo utente va a buon fine si restituisce il record salvato (senza password) ed il token jwt
         removeProperties([user], "password");
