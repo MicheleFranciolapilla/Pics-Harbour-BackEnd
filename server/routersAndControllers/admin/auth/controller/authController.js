@@ -90,6 +90,11 @@ async function logIn(req, res, next)
     }
 }
 
+async function logOut(req, res, next)
+{
+
+}
+
 /**
  * Verifica la validità del token
  * @function
@@ -119,4 +124,4 @@ function checkToken(req, res, next)
         return next(new ErrorInvalidData("token (missing)", "AUTH - CHECKTOKEN"));
 }
 
-module.exports = { signUp, logIn, checkToken }
+module.exports = { signUp, logIn, logOut, checkToken }

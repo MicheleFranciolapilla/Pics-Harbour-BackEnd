@@ -72,3 +72,12 @@ model Picture {
   
   @@map("Pictures")
 }
+
+// Modello della tabella TokensBlacklist
+model TokensBlacklist {
+  id    Int       @id @default(autoincrement())
+  token String    @db.VarChar(512)
+  expAt DateTime  @default(now())
+
+  @@map("TokensBlacklist")
+}
