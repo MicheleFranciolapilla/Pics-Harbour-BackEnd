@@ -2,6 +2,7 @@ const jwt = require("jsonwebtoken");
 
 const { formattedOutput } = require("../../utilities/consoleOutput");
 const { rolesAccessibilityValue, checkRoleAccessibility } = require("../../utilities/roleManagement");
+const { checkIfBlacklisted } = require("../../utilities/tokensBlacklistManagement");
 
 const ErrorUserNotAllowed = require("../exceptions/ErrorUserNotAllowed");
 
@@ -14,12 +15,22 @@ const ErrorUserNotAllowed = require("../exceptions/ErrorUserNotAllowed");
  * @param {Function} next 
  * @returns {void}
  */
-function tokenVerifier(req, res, next)
+async function tokenVerifier(req, res, next)
 {
     const bearerToken = req.headers.authorization;
     if (!bearerToken || !bearerToken.startsWith("Bearer "))
         return next(new ErrorUserNotAllowed("User not allowed to perform the requested operation.", "AUTHORIZATION MIDDLEWARE - TOKEN VERIFIER"));
     const token = bearerToken.split(" ")[1];
+    try
+    {
+        const isBlacklisted = await checkIfBlacklisted(token, "AUTHORIZATION MIDDLEWARE - TOKEN VERIFIER");
+        if (isBlacklisted)
+            throw new ErrorUserNotAllowed("User not allowed to perform the requested operation.", "AUTHORIZATION MIDDLEWARE - TOKEN VERIFIER");
+    }
+    catch(error)
+    {
+        return next(error);
+    }
     jwt.verify(token, process.env.JWT_SECRET, (error, payload) =>
         {
             if (error)
@@ -29,11 +40,14 @@ function tokenVerifier(req, res, next)
             }
             else
             {
+                // Solo per le rotte che prevedono l'utilizzo dei dati del token, gli stessi vengono salvati in request.tokenOwner
                 req["tokenOwner"] =
                 {
                     "id"    :   parseInt(payload.id),
-                    "role"  :   payload.role
+                    "role"  :   payload.role,
+                    ...(req.rolesAccessibility.token && { "token" : token, "exp" : payload.exp })
                 };
+                console.log("OWNER: ", req.tokenOwner);
                 return next();
             }
         });
@@ -63,15 +77,17 @@ const roleVerifier = (req, res, next) =>
  * Combina i middlewares tokenVerifier e roleVerifier per garantire che l'utente abbia le autorizzazioni necessarie.
  * Propedeuticamente, il middleware salva nella request l'oggetto "rolesAccessibility" contenente i dati relativi all'accessibilità alla rotta corrente
  * @param {...string} rolesToAllow - Ruoli autorizzati ad accedere alla rotta richiesta
+ * @param {boolean} saveToken - Booleano che comunica al "tokenVerifier" se salvare nella request.tokenOwner anche il token ed il campo "exp"
  * @returns {Function} - Middleware anonimo con chiamata ai due middlewares tokenVerifier e roleVerifier
  */
 // N.B. La funzione anonima (middleware) restituito in prima battuta da authorizationMiddleware rappresenta quello riportato in coda al middleware in server.js
-module.exports =    (...rolesToAllow) => (req, res, next) => 
+module.exports =    (saveToken, ...rolesToAllow) => (req, res, next) => 
                                         {
                                             req["rolesAccessibility"] = 
                                             {
                                                 "roles" : rolesToAllow,
-                                                "value" : rolesAccessibilityValue(...rolesToAllow)
+                                                "value" : rolesAccessibilityValue(...rolesToAllow),
+                                                "token" : saveToken
                                             }
                                             console.log(req["rolesAccessibility"])
                                             tokenVerifier(req, res, (error) => (error ? next(error) : roleVerifier(req, res, next)));

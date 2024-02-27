@@ -74,10 +74,10 @@ model Picture {
 }
 
 // Modello della tabella TokensBlacklist
-model TokensBlacklist {
+model Tokensblacklist {
   id    Int       @id @default(autoincrement())
-  token String    @db.VarChar(512)
+  token String    @db.VarChar(512) @unique
   expAt DateTime  @default(now())
 
-  @@map("TokensBlacklist")
+  @@map("Tokensblacklist")
 }

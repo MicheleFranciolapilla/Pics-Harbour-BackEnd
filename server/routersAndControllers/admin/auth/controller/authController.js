@@ -9,6 +9,7 @@ const { removeProperties } = require("../../../../utilities/general");
 const { formattedOutput } = require("../../../../utilities/consoleOutput");
 const { tokenLifeTime } = require("../../../../utilities/variables");
 const { fileUploadReport, deleteFileBeforeThrow } = require("../../../../utilities/fileManagement");
+const { addTokenToBlacklist } = require("../../../../utilities/tokensBlacklistManagement");
 
 /**
  * Consente la registrazione di un nuovo utente (Admin). Nel caso di esito positivo effettua il logIn dello stesso.
@@ -43,7 +44,7 @@ async function signUp(req, res, next)
         const prismaQuery = { "data" : { "name" : name, "surname" : surname, "email" : email, "password" : hashedPsw, "thumb" : thumb, "website" : website } };
         const user = await createRecord("user", prismaQuery, "AUTH - SIGNUP");
         // Se l'operazione di creazione nuovo utente va a buon fine si restituisce il record salvato (senza password) ed il token jwt
-        removeProperties([user], "password");
+        removeProperties([user], "password", "createdAt", "updatedAt");
         const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn : tokenLifeTime });
         formattedOutput("AUTH - SIGNUP - SUCCESS", "***** Status: 201", "***** New User: ", user, "***** Token: ", token);
         return res.status(201).json({ user, token });
@@ -79,7 +80,7 @@ async function logIn(req, res, next)
         if (!checkPsw)
             throw new ErrorInvalidData("password", "AUTH - LOGIN");
         // Se la password è corretta si prosegue con l'ottenimento del jwt
-        removeProperties([user], "password");
+        removeProperties([user], "password", "createdAt", "updatedAt");
         const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn : tokenLifeTime });
         formattedOutput("AUTH - LOGIN - SUCCESS", "***** Status: 200", "***** Logged user: ", user, "***** Token: ", token);
         return res.json({ user, token });
@@ -92,7 +93,16 @@ async function logIn(req, res, next)
 
 async function logOut(req, res, next)
 {
-
+    try
+    {
+        await addTokenToBlacklist(req.tokenOwner, "AUTH - LOGOUT");
+        formattedOutput("AUTH - LOGOUT - SUCCESS", "***** Status: 201", "***** Unlogged user Id: ", req.tokenOwner.id, "***** Token in black list: ", req.tokenOwner.token);
+        return res.status(201).json({ "Unlogged" : req.tokenOwner.id, "BlackListToken" : req.tokenOwner.token });
+    }
+    catch(error)
+    {
+        return next(error);
+    }
 }
 
 /**

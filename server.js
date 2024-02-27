@@ -47,9 +47,9 @@ server.use("/auth", authRoutes);
 //    const middlewareFunction = authorizationMiddleware("Super Admin");
 //    middlewareFunction(req, res, next);
 // }
-server.use("/users", (req, res, next) => authorizationMiddleware("Admin", "Super Admin")(req, res, next), usersPrivateRoutes);
-server.use("/pictures", (req, res, next) => authorizationMiddleware("Admin")(req, res, next), picturesPrivateRoutes);
-server.use("/categories", (req, res, next) => authorizationMiddleware("Super Admin")(req, res, next), categoriesPrivateRoutes);
+server.use("/users", (req, res, next) => authorizationMiddleware(true, "Admin", "Super Admin")(req, res, next), usersPrivateRoutes);
+server.use("/pictures", (req, res, next) => authorizationMiddleware(false, "Admin")(req, res, next), picturesPrivateRoutes);
+server.use("/categories", (req, res, next) => authorizationMiddleware(false, "Super Admin")(req, res, next), categoriesPrivateRoutes);
 
 // Middlewares errori
 server.use(route404);
