@@ -72,4 +72,12 @@ function upperStartingChar(normalizedStringOfWords, allFirstChars)
  */
 const basicSlug = (stringToSlug, slugChar = "-") => stringToSlug.replaceAll(" ", slugChar).toLowerCase();
 
-module.exports = { removeProperties, addPropertyAtPosition, normalizeSpaces, upperStartingChar, basicSlug }
+/**
+ * Funzione che restituisce true o false a seconda che "numberToCheck" sia o meno divisibile per "divisor"
+ * @param {number} numberToCheck - Numero da verificare
+ * @param {number} divisor - Divisore
+ * @returns {boolean} - Risultato booleano del check
+ */
+const isDivisibleBY = (numberToCheck, divisor) => (numberToCheck % divisor === 0);
+
+module.exports = { removeProperties, addPropertyAtPosition, normalizeSpaces, upperStartingChar, basicSlug, isDivisibleBY }

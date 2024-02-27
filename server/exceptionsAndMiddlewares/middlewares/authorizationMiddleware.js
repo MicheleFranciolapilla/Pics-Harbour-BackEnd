@@ -1,8 +1,7 @@
 const jwt = require("jsonwebtoken");
 
 const { formattedOutput } = require("../../utilities/consoleOutput");
-const { normalizeSpaces, upperStartingChar } = require("../../utilities/general");
-const { returnRoleData } = require("../../utilities/roleManagement");
+const { rolesAccessibilityValue, checkRoleAccessibility } = require("../../utilities/roleManagement");
 
 const ErrorUserNotAllowed = require("../exceptions/ErrorUserNotAllowed");
 
@@ -33,7 +32,7 @@ function tokenVerifier(req, res, next)
                 req["tokenOwner"] =
                 {
                     "id"    :   parseInt(payload.id),
-                    "role"  :   upperStartingChar(normalizeSpaces(payload.role.trim()), true)
+                    "role"  :   payload.role
                 };
                 return next();
             }
@@ -42,37 +41,38 @@ function tokenVerifier(req, res, next)
 
 /**
  * Middleware per la verifica del ruolo dell'utente.
- * Verifica che l'utente richiedente abbia il "rango" richiesto per l'accesso all'operazione, nel qual caso consente la prosecuzione; 
- * in caso contrario lancia un errore specifico.
+ * Verifica che l'utente abbia i diritti per accedere alla rotta richiesta; in caso negativo lancia un errore specifico 
  * @param {Object} req 
  * @param {Object} res 
  * @param {Function} next 
  * @returns {void}
  */
-function roleVerifier(req, res, next)
+const roleVerifier = (req, res, next) =>
 {
-    const { role } = req.tokenOwner;
-    const { roleToAllow } = req;
-    if (returnRoleData(role).rank == returnRoleData(roleToAllow).rank)
+    if (checkRoleAccessibility(req.tokenOwner.role, req))
     {
-        formattedOutput("AUTHORIZATION MIDDLEWARE - USER ALLOWED TO PROCEED", `***** User Id: ${req.tokenOwner.id}`, `***** User Role: ${role}`);
+        formattedOutput("AUTHORIZATION MIDDLEWARE - USER ALLOWED TO PROCEED", `***** User Id: ${req.tokenOwner.id}`, `***** User Role: ${req.tokenOwner.role}`);
         return next();
     }
     else
-        return next(new ErrorUserNotAllowed(`User not allowed to perform the requested operation - access reserved to role [${roleToAllow}]`, "AUTHORIZATION MIDDLEWARE - ROLE VERIFIER"));
+        return next(new ErrorUserNotAllowed(`User not allowed to perform the requested operation`, "AUTHORIZATION MIDDLEWARE - ROLE VERIFIER"));
 }
 
 /**
  * Middleware di autorizzazione.
  * Combina i middlewares tokenVerifier e roleVerifier per garantire che l'utente abbia le autorizzazioni necessarie.
- * Accetta un parametro extra, "roleToAllow", che rappresenta il ruolo richiesto per l'accesso alla route.
- * Aggiunge anche l'informazione "roleToAllow" all'oggetto req per uso successivo, se necessario.
- * @param {string} roleToAllow - Ruolo richiesto per l'accesso alla rotta
+ * Propedeuticamente, il middleware salva nella request l'oggetto "rolesAccessibility" contenente i dati relativi all'accessibilità alla rotta corrente
+ * @param {...string} rolesToAllow - Ruoli autorizzati ad accedere alla rotta richiesta
  * @returns {Function} - Middleware anonimo con chiamata ai due middlewares tokenVerifier e roleVerifier
  */
 // N.B. La funzione anonima (middleware) restituito in prima battuta da authorizationMiddleware rappresenta quello riportato in coda al middleware in server.js
-module.exports =    (roleToAllow) => (req, res, next) => 
+module.exports =    (...rolesToAllow) => (req, res, next) => 
                                         {
-                                            req["roleToAllow"] = upperStartingChar(normalizeSpaces(roleToAllow.trim()), true);
+                                            req["rolesAccessibility"] = 
+                                            {
+                                                "roles" : rolesToAllow,
+                                                "value" : rolesAccessibilityValue(...rolesToAllow)
+                                            }
+                                            console.log(req["rolesAccessibility"])
                                             tokenVerifier(req, res, (error) => (error ? next(error) : roleVerifier(req, res, next)));
                                         };
