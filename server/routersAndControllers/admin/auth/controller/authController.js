@@ -9,7 +9,7 @@ const { removeProperties } = require("../../../../utilities/general");
 const { formattedOutput } = require("../../../../utilities/consoleOutput");
 const { tokenLifeTime } = require("../../../../utilities/variables");
 const { fileUploadReport, deleteFileBeforeThrow } = require("../../../../utilities/fileManagement");
-const { addTokenToBlacklist } = require("../../../../utilities/tokensBlacklistManagement");
+const { addTokenToBlacklist, checkIfBlacklisted } = require("../../../../utilities/tokensBlacklistManagement");
 
 /**
  * Consente la registrazione di un nuovo utente (Admin). Nel caso di esito positivo effettua il logIn dello stesso.
@@ -113,10 +113,21 @@ async function logOut(req, res, next)
  * @param {Function} next - Middleware "express next"
  * @returns {Promise<{ token: String, payLoad: Object }>|Error} - Promise che si risolve con un oggetto le cui proprietà sono "token" (già ricevuto nella request) e "payLoad" (dati dello user già loggato, senza password) in caso di successo, o viene respinta con un errore in caso di fallimento.
  */
-function checkToken(req, res, next)
+async function checkToken(req, res, next)
 {
     const { token } = req.body;
     if (token)
+    {
+        try
+        {
+            const isBlacklisted = await checkIfBlacklisted(token, "AUTH - CHECKTOKEN");
+            if (isBlacklisted)
+                throw new ErrorInvalidData("token (in black list)", "AUTH - CHECKTOKEN");
+        }
+        catch(error)
+        {
+            return next(error);
+        }
         jwt.verify(token, process.env.JWT_SECRET, (error, payload) =>
             {
                 if (error)
@@ -130,6 +141,7 @@ function checkToken(req, res, next)
                     return res.json({ token, payload });
                 }
             });
+    }
     else
         return next(new ErrorInvalidData("token (missing)", "AUTH - CHECKTOKEN"));
 }
