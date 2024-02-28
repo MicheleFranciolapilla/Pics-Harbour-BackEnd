@@ -213,6 +213,7 @@ const findAllCategories = async (categoriesToFind, callerBlock) =>
 }
 
 module.exports = 
-{   noError, errorIfExists, errorIfDoesntExist, 
+{   prisma,
+    noError, errorIfExists, errorIfDoesntExist, 
     prismaCall, createRecord, updateRecord, deleteRecord, getUniqueItem, getUser, checkEmail, checkSlug, checkPictureOwnership, deletePictureIfOwner, findAllCategories
 }

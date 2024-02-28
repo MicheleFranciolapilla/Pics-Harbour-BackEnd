@@ -47,7 +47,6 @@ async function tokenVerifier(req, res, next)
                     "role"  :   payload.role,
                     ...(req.rolesAccessibility.token && { "token" : token, "exp" : payload.exp })
                 };
-                console.log("OWNER: ", req.tokenOwner);
                 return next();
             }
         });
@@ -89,6 +88,5 @@ module.exports =    (saveToken, ...rolesToAllow) => (req, res, next) =>
                                                 "value" : rolesAccessibilityValue(...rolesToAllow),
                                                 "token" : saveToken
                                             }
-                                            console.log(req["rolesAccessibility"])
                                             tokenVerifier(req, res, (error) => (error ? next(error) : roleVerifier(req, res, next)));
                                         };

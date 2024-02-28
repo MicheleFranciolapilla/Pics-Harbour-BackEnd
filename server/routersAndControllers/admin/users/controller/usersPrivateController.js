@@ -1,83 +1,72 @@
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
-const { matchedData } = require("express-validator");
-
-const ErrorFromDB = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorFromDB");
-const ErrorUserNotAllowed = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorUserNotAllowed");
-const ErrorResourceNotFound = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorResourceNotFound");
 const ErrorOperationRefused = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorOperationRefused");
+const ErrorFromDB = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorFromDB");
+
+const { prisma, prismaCall } = require("../../../../utilities/prismaCalls");
+const { removeProperties } = require("../../../../utilities/general");
+const { deleteFileBeforeThrow, buildFileObject } = require("../../../../utilities/fileManagement");
+const { formattedOutput } = require("../../../../utilities/consoleOutput");
+const { addTokenToBlacklist } = require("../../../../utilities/tokensBlacklistManagement");
 
 async function destroy(req, res, next)
 {
-    const { id } = matchedData(req, { onlyValidData : true });
-    // Dopo aver recuperato l'id (validato) dell'utente che si desidera cancellare, per prima cosa si procede verificando che l'id del richiedente coincida, poichè la cancellazione di un utente è permessa solo all'utente interessato, neanche il Super Admin può cancellare alcun utente diverso da sè stesso
-    if (id != req.tokenOwner.id)
-        return next(new ErrorUserNotAllowed("User not allowed to delete another user.", "USERS (PRIVATE) - DESTROY"));
-    // Una volta accertato che l'utente intende cancellare sè stesso dal database, si procede con l'operazione
-    // Bisognerà avere le seguenti accortezze:
-    // -A- Se ad essere cancellato è un Super Admin, bisognerà autorizzare l'operazione solo se egli non è l'unico Super Admin presente
-    // -B- Se ad essere cancellato è un Super Admin, le categories da lui create verranno associate ad un altro Super Admin
-    // -C- Contestualmente alla cancellazione dello user bisognerà cancellare anche tutte le sue pictures (annullando il collegamento delle categories correlate ad esse)
-    // In linea teorica non ci sarebbe bisogno di verificare la presenza dello user da cancellare all'interno del db, in virtù del fatto che la richiesta è stata formulata dallo stesso che risulta ancora loggato ma si procede, comunque ad effettuare questo controllo di sicurezza.
+    // Regole generali:
+    // - Nel database deve sempre esistere almeno uno user con ruolo "Super Admin", quindi un "Super Admin" può cancellarsi solo se non è l'unico
+    // - Essendo le "categories" associate al "Super Admin", all'atto della cancellazione dello stesso, le sue "categories" passano ad un altro pari ruolo 
+    const { tokenOwner } = req;
+    let prismaQuery = { "where" : { "NOT" : { "id" : tokenOwner.id }, "role" : "Super Admin" } };
+    let prismaTransaction = null;
+    let alternativeSA = null;
     try
     {
-        const userToDelete = await prisma.user.findUnique(
-            {   
-                "where"     : 
-                                { 
-                                    "id"            :   id 
-                                },
-                "include"   :   {
-                                    "pictures"      :   true,
-                                    "categories"    :   true
-                                }  
+        if (tokenOwner.role === "Super Admin")
+        // Se lo user che intende cancellarsi è un "Super Admin" se ne ricerca un altro nel db; se non c'è si abbandona con errore specifico
+        {
+            alternativeSA = await prismaCall("user", "findFirst", prismaQuery, "USERS (PRIVATE) - DESTROY");
+            if (!alternativeSA)
+                throw new ErrorOperationRefused("The 'unique' Super Admin cannot be deleted", "USERS (PRIVATE) - DESTROY");
+            removeProperties([alternativeSA], "password");
+        }
+        // Si unifica il codice per "Admin" e "Super Admin" facendo ricorso alla "transaction" di Prisma.
+        // La "transaction" consente di effettuare più operazioni sul database salvando i risultati solo se tutte vanno a buon fine.
+        // Nel caso in cui non tutte le operazioni della "transaction" vanno a buon fine, viene effettuato un "rollback" per quelle già eseguite con successo.
+        await prisma.$transaction( async (instance) =>
+            {
+                // Nel caso specifico, la "transaction" ha particolare senso nel caso del "Super Admin", poichè esegue le seguenti due operazioni:
+                // - riassegnazione delle categories al nuovo Super Admin
+                // - cancellazione dello user Super Admin
+                let updatedCategories = null;
+                if (tokenOwner.role === "Super Admin")
+                {
+                    // Operazione per il solo caso "Super Admin"
+                    updatedCategories = await instance.category.updateMany({ "where" : { "userId" : tokenOwner.id }, "data" : { "userId" : alternativeSA.id } });
+                    formattedOutput(
+                        "USERS (PRIVATE) - DESTROY / TRANSACTION: UPDATE CATEGORIES (TENTATIVE)",
+                        `***** Numbers of categories updated: ${updatedCategories.count}`,
+                        `***** From user Id ${tokenOwner.id} (not yet deleted)`,
+                        `***** To user Id ${alternativeSA.id}`);
+                }
+                // Operazione unificata
+                let deletedUser = await instance.user.delete({ "where" : { "id" : tokenOwner.id } , "include" : { "pictures" : { "select" : { "image" : true } } } });
+                removeProperties([deletedUser], "password");
+                formattedOutput("USERS (private) - DESTROY - SUCCESS", "***** Status: 200", "***** Deleted User: ", deletedUser);
+                prismaTransaction = { updatedCategories, deletedUser };
             });
-        console.log("TO DELETE: ",userToDelete);
-        if (!userToDelete)
-            return next(new ErrorResourceNotFound("User", "USERS (PRIVATE) - DESTROY - TRY"));
-        // -A-
-        if (req.tokenOwner.role == "Super Admin")
-        {
-            // Si procede con il recupero dei dati (con relazioni) di un altro Super Admin (se esistente), diverso da quello che si intende cancellare
-            try
-            {
-                const otherSuperAdmin = await prisma.user.findFirst(
-                    {
-                        "where"     :   {
-                                            "NOT"           :   {
-                                                                    "id"    :   id
-                                                                },
-                                            "role"          :   "Super Admin"
-                                        },
-                        "include"   :   {
-                                            "pictures"      :   true,
-                                            "categories"    :   true
-                                        }   
-                    });
-                console.log("OTHER: ", otherSuperAdmin);
-                if (!otherSuperAdmin)
-                    return next(new ErrorOperationRefused("The operation cannot be performed. Cannot delete the unique Super Admin", "USERS (PRIVATE) - DESTROY - TRY (otherSuperAdmin)"));
-                // -B-
-                // await prisma.user.update(
-                //     {
-                //         "where":{"id":id},
-                //         "data":{pictures:{"delete":true}}
-                //     });
-            }
-            catch(errorOnOtherSuperAdminQuery)
-            {
-                return next(new ErrorFromDB("Service temporarily unavailable", 503, "USERS (PRIVATE) - DESTROY - CATCH (otherSuperAdmin)"));
-            }
-        }
-        else
-        {
-
-        }
+        // Si cancellano dal server il file immagine dello user (se presente)...
+        if (prismaTransaction.deletedUser.thumb)
+            await deleteFileBeforeThrow(buildFileObject(prismaTransaction.deletedUser.thumb), "USERS (PRIVATE) - DESTROY");
+        // ... e tutti i files immagine delle pictures associate allo user (codice unificato ma effettivamente eseguito solo per gli Admin)
+        for (let index = 0; index < prismaTransaction.deletedUser.pictures.length; index++)
+            deleteFileBeforeThrow(buildFileObject(prismaTransaction.deletedUser.pictures[index].image), "USERS (PRIVATE) - DESTROY");
+        // Si aggiunge il token alla black list in modo da evitare conflitti in caso di riutilizzo, anche se con user cancellato
+        await addTokenToBlacklist(tokenOwner, "USERS (PRIVATE) - DESTROY");
+        return res.json({ "user" : {...prismaTransaction.deletedUser} });
     }
     catch(error)
     {
-        return next(new ErrorFromDB("Service temporarily unavailable", 503, "USERS (PRIVATE) - DESTROY - CATCH (userToDelete)"));
+        if ((error instanceof ErrorFromDB) || (error instanceof ErrorOperationRefused))
+            return next(error);
+        else
+            return next(new ErrorFromDB(`Service temporarily unavailable: ${error.message}`, 503, "USERS (PRIVATE) - DESTROY / TRANSACTION"))
     }
-}
 
 module.exports = { destroy };
