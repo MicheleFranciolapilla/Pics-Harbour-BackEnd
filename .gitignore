@@ -4,3 +4,4 @@ prisma/migrations/
 documents/
 out/
 .env
+notes.txt
