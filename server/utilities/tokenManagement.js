@@ -14,8 +14,34 @@ const createNewToken = (user) =>
     return token;
 }
 
+const checkIfAlreadyLogged = (tokenExpDateTime) =>
+{
+    let logged = false;
+    let expiresIn = null;
+    if (tokenExpDateTime)
+    {
+        const tokenMSecs = new Date(tokenExpDateTime).getTime();
+        const now = Date.now();
+        if (tokenMSecs > now)
+        {
+            logged = true;
+            expiresIn = {};
+            let gap = Math.ceil((tokenMSecs - now) / 1000);
+            expiresIn["h"] = Math.floor(gap / 3600);
+            gap = gap % 3600;
+            expiresIn["m"] = Math.floor(gap / 60);
+            expiresIn["s"] = gap % 60;
+            if (expiresIn.h == 0)
+                delete expiresIn.h;
+            if (!expiresIn.h && (expiresIn.m == 0))
+                delete expiresIn.m;
+        }
+    }
+    return { logged, expiresIn };
+}
+
 const addTokenToBlacklist = async (token, callerBlock) => 
-    await createRecord("tokensblacklist", { "data" : { "token" : token, "expAt" : tokenExpAt(token) } }, callerBlock);
+    await createRecord("tokensblacklist", { "data" : { "token" : token, "tokenExpAt" : tokenExpAt(token) } }, callerBlock);
 
 const checkIfBlacklisted = async (tokenToCheck, callerBlock) =>
 {
@@ -23,4 +49,4 @@ const checkIfBlacklisted = async (tokenToCheck, callerBlock) =>
     return (result !== null);
 }
 
-module.exports = { tokenExpAt, createNewToken, addTokenToBlacklist, checkIfBlacklisted }
+module.exports = { tokenExpAt, createNewToken, checkIfAlreadyLogged, addTokenToBlacklist, checkIfBlacklisted }

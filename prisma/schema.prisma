@@ -27,7 +27,7 @@ model User {
   pictures    Picture[]
   // Relazione ONE TO MANY con tabella Categories
   categories  Category[]
-  tokenExpAt  DateTime  @default(now())
+  tokenExpAt  DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   
@@ -76,9 +76,9 @@ model Picture {
 
 // Modello della tabella TokensBlacklist
 model Tokensblacklist {
-  id    Int       @id @default(autoincrement())
-  token String    @db.VarChar(512) @unique
-  expAt DateTime  @default(now())
+  id          Int       @id @default(autoincrement())
+  token       String    @db.VarChar(512) @unique
+  tokenExpAt  DateTime
 
   @@map("Tokensblacklist")
 }

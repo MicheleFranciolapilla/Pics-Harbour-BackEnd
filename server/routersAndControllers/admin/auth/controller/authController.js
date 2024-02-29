@@ -3,13 +3,14 @@ const bcrypt = require("bcrypt");
 const { matchedData } = require("express-validator");
 
 const ErrorInvalidData = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorInvalidData");
+const ErrorOperationRefused = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorOperationRefused");
 
 const { errorIfExists, checkEmail, createRecord, getUser, updateRecord } = require("../../../../utilities/prismaCalls");
 const { removeProperties } = require("../../../../utilities/general");
 const { formattedOutput } = require("../../../../utilities/consoleOutput");
 const { tokenLifeTime } = require("../../../../utilities/variables");
 const { fileUploadReport, deleteFileBeforeThrow } = require("../../../../utilities/fileManagement");
-const { createNewToken, tokenExpAt, addTokenToBlacklist, checkIfBlacklisted } = require("../../../../utilities/tokenManagement");
+const { createNewToken, tokenExpAt, checkIfAlreadyLogged, addTokenToBlacklist, checkIfBlacklisted } = require("../../../../utilities/tokenManagement");
 
 /**
  * Consente la registrazione di un nuovo utente (Admin). Nel caso di esito positivo effettua il logIn dello stesso.
@@ -89,21 +90,42 @@ async function signUp(req, res, next)
 async function logIn(req, res, next)
 {
     const { email, password } = matchedData(req, { onlyValidData : true });
+    let token = null;
     try
     {
-        const user = await getUser(email, "AUTH - LOGIN");
+        let user = await getUser(email, "AUTH - LOGIN");
         // Se l'email esiste si prosegue verificando la correttezza della password, confrontando, mediante il metodo bcrypt.compare, la password (plain) ricevuta dal client con la password criptata ricavata dal db
         const checkPsw = await bcrypt.compare(password, user.password);
         if (!checkPsw)
             throw new ErrorInvalidData("password", "AUTH - LOGIN");
-        // Se la password è corretta si prosegue con l'ottenimento del jwt
-        removeProperties([user], "password", "createdAt", "updatedAt");
-        const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn : tokenLifeTime });
+        // Se la password è corretta si verifica se lo user è già loggato
+        const { logged, expiresIn } = checkIfAlreadyLogged(user.tokenExpAt);
+        if (logged)
+        {
+            let expireMsg = `${expiresIn.s} ${(expiresIn.s > 1) ? "seconds" : "second"}`;
+            if (expiresIn.m)
+            {
+                expireMsg = `${expiresIn.m} ${(expiresIn.m > 1) ? "minutes" : "minute"}, ` + expireMsg;
+                if (expiresIn.h)
+                    expireMsg = `${expiresIn.h} ${(expiresIn.h > 1) ? "hours" : "hour"}, ` + expireMsg;
+            }
+            throw new ErrorOperationRefused(`User already logged In. The token expires in ${expireMsg}.`, "AUTH - LOGIN");
+        }
+        // Se lo user non è già loggato si procede con il logIn
+        token = createNewToken(user);
+        // Dopo aver creato il token bisogna registrare la sua scadenza nel database
+        let prismaQuery = { "where" : { "id" : user.id } };
+        removeProperties([user], "id", "createdAt", "updatedAt");
+        prismaQuery["data"] = { ...user, "tokenExpAt" : tokenExpAt(token) };
+        user = await updateRecord("user", prismaQuery, "AUTH - LOGIN");
+        removeProperties([user], "password");
         formattedOutput("AUTH - LOGIN - SUCCESS", "***** Status: 200", "***** Logged user: ", user, "***** Token: ", token);
         return res.json({ user, token });
     }
     catch(error)
     {
+        if (token)
+            await addTokenToBlacklist(token, "AUTH - LOGIN"); 
         return next(error);
     }
 }
