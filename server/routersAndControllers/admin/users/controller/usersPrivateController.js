@@ -7,6 +7,11 @@ const { deleteFileBeforeThrow, buildFileObject } = require("../../../../utilitie
 const { formattedOutput } = require("../../../../utilities/consoleOutput");
 const { addTokenToBlacklist } = require("../../../../utilities/tokensBlacklistManagement");
 
+async function update(req, res, next)
+{
+
+}
+
 async function destroy(req, res, next)
 {
     // Regole generali:
@@ -68,5 +73,6 @@ async function destroy(req, res, next)
         else
             return next(new ErrorFromDB(`Service temporarily unavailable: ${error.message}`, 503, "USERS (PRIVATE) - DESTROY / TRANSACTION"))
     }
+}
 
-module.exports = { destroy };
+module.exports = { update, destroy };
