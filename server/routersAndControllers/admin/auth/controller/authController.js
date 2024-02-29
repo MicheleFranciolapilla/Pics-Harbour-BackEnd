@@ -9,7 +9,7 @@ const { removeProperties } = require("../../../../utilities/general");
 const { formattedOutput } = require("../../../../utilities/consoleOutput");
 const { tokenLifeTime } = require("../../../../utilities/variables");
 const { fileUploadReport, deleteFileBeforeThrow } = require("../../../../utilities/fileManagement");
-const { addTokenToBlacklist, checkIfBlacklisted } = require("../../../../utilities/tokensBlacklistManagement");
+const { createNewToken, tokenExpAt, addTokenToBlacklist, checkIfBlacklisted } = require("../../../../utilities/tokenManagement");
 
 /**
  * Consente la registrazione di un nuovo utente (Admin). Nel caso di esito positivo effettua il logIn dello stesso.
@@ -32,6 +32,8 @@ async function signUp(req, res, next)
     const { name, surname, email, password, website } = matchedData(req, { onlyValidData : true });
     const { fileData } = req;
     let thumb = null;
+    let token = null;
+    let user = null;
     if (fileData)
     // Casi B, C o D
         if (fileUploadReport(req).File_uploaded)
@@ -41,20 +43,35 @@ async function signUp(req, res, next)
     {
         await checkEmail(email, errorIfExists, "AUTH - SIGNUP");
         const hashedPsw = await bcrypt.hash(password, parseInt(process.env.BCRYPT_SALT_ROUNDS));
-        const prismaQuery = { "data" : { "name" : name, "surname" : surname, "email" : email, "password" : hashedPsw, "thumb" : thumb, "website" : website } };
-        const user = await createRecord("user", prismaQuery, "AUTH - SIGNUP");
-        // Se l'operazione di creazione nuovo utente va a buon fine si restituisce il record salvato (senza password) ed il token jwt
-        removeProperties([user], "password", "createdAt", "updatedAt");
-        const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn : tokenLifeTime });
-        formattedOutput("AUTH - SIGNUP - SUCCESS", "***** Status: 201", "***** New User: ", user, "***** Token: ", token);
-        return res.status(201).json({ user, token });
+        let prismaQuery = { "data" : { "name" : name, "surname" : surname, "email" : email, "password" : hashedPsw, "thumb" : thumb, "website" : website } };
+        user = await createRecord("user", prismaQuery, "AUTH - SIGNUP / CREATE");
+        // A creazione utente avvenuta si genera il token
+        token = createNewToken(user);
+        // Dopo aver creato il token bisogna registrare la sua scadenza nel database, aggiornando il record user appena creato
+        prismaQuery = { "where" : { "id" : user.id }, "data" : { ...prismaQuery.data, "tokenExpAt" : tokenExpAt(token) }};
+        user = await updateRecord("user", prismaQuery, "AUTH - SIGNUP / UPDATE");
+        // Se anche l'update va a buon fine si restituisce il record dell'utente creato e completo del campo di scadenza token
+        removeProperties([user], "password");
+        formattedOutput("AUTH - SIGNUP - SUCCESS", "***** Status: 201", "***** New User (logged): ", user, "***** Token: ", token);
+        return res.status(201).json({ user, "logged" : true, token });
     }
     catch(error)
     {
-        if (thumb)
+        if (thumb && !token)
         // Caso D
         // Se ci sono stati errori tali da non consentire la creazione del nuovo utente, prima di lanciarli, si rimuove l'eventuale file immagine dal server
+        // "!token" implica che l'errore si è verificato prima della creazione dello user, quindi il file immagine eventuale va cancellato
+        // se invece l'errore si è verificato dopo la creazione ("token non null") significa che lo user è stato salvato con la "thumb" corretta
             await deleteFileBeforeThrow(req.file, "AUTH - SIGNUP");
+        if (token)
+        // Se l'utente è stato creato ma si è verificato un errore che ne ha impedito l'update con il campo "tokenExpAt" correttamente settato sarà "token not null"
+        // Essendo "token not null" e "tokenExpAt" non aggiornato in tabella, bisognerà inserire il token nella black list ma andrà comunque comunicato il successo nella creazione dello user
+        {
+            await addTokenToBlacklist(token, "AUTH - SIGNUP");
+            removeProperties([user], "password");
+            formattedOutput("AUTH - SIGNUP - SUCCESS", "***** Status: 201", "***** New User (not logged): ", user);
+            return res.status(201).json({ user, "logged" : false });
+        }
         return next(error);
     }
 }

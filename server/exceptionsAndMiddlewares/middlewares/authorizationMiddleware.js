@@ -2,7 +2,7 @@ const jwt = require("jsonwebtoken");
 
 const { formattedOutput } = require("../../utilities/consoleOutput");
 const { rolesAccessibilityValue, checkRoleAccessibility } = require("../../utilities/roleManagement");
-const { checkIfBlacklisted } = require("../../utilities/tokensBlacklistManagement");
+const { checkIfBlacklisted } = require("../../utilities/tokenManagement");
 
 const ErrorUserNotAllowed = require("../exceptions/ErrorUserNotAllowed");
 

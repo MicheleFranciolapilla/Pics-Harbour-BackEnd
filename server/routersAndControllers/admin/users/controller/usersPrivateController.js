@@ -5,7 +5,7 @@ const { prisma, prismaCall } = require("../../../../utilities/prismaCalls");
 const { removeProperties } = require("../../../../utilities/general");
 const { deleteFileBeforeThrow, buildFileObject } = require("../../../../utilities/fileManagement");
 const { formattedOutput } = require("../../../../utilities/consoleOutput");
-const { addTokenToBlacklist } = require("../../../../utilities/tokensBlacklistManagement");
+const { addTokenToBlacklist } = require("../../../../utilities/tokenManagement");
 
 async function update(req, res, next)
 {
