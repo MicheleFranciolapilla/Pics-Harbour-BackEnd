@@ -33,7 +33,7 @@ async function destroy(req, res, next)
         }
         // Si unifica il codice per "Admin" e "Super Admin" facendo ricorso alla "transaction" di Prisma.
         // La "transaction" consente di effettuare più operazioni sul database salvando i risultati solo se tutte vanno a buon fine.
-        // Nel caso in cui non tutte le operazioni della "transaction" vanno a buon fine, viene effettuato un "rollback" per quelle già eseguite con successo.
+        // Nel caso in cui NON tutte le operazioni della "transaction" vanno a buon fine, viene effettuato un "rollback" per quelle già eseguite con successo.
         await prisma.$transaction( async (instance) =>
             {
                 // Nel caso specifico, la "transaction" ha particolare senso nel caso del "Super Admin", poichè esegue le seguenti due operazioni:
@@ -63,7 +63,7 @@ async function destroy(req, res, next)
         for (let index = 0; index < prismaTransaction.deletedUser.pictures.length; index++)
             deleteFileBeforeThrow(buildFileObject(prismaTransaction.deletedUser.pictures[index].image), "USERS (PRIVATE) - DESTROY");
         // Si aggiunge il token alla black list in modo da evitare conflitti in caso di riutilizzo, anche se con user cancellato
-        await addTokenToBlacklist(tokenOwner, "USERS (PRIVATE) - DESTROY");
+        await addTokenToBlacklist(tokenOwner.token, "USERS (PRIVATE) - DESTROY");
         return res.json({ "user" : {...prismaTransaction.deletedUser} });
     }
     catch(error)
