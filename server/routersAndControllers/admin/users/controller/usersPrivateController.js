@@ -1,15 +1,52 @@
+const bcrypt = require("bcrypt");
+
 const ErrorOperationRefused = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorOperationRefused");
 const ErrorFromDB = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorFromDB");
+const ErrorInvalidData = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorInvalidData");
 
-const { prisma, prismaCall } = require("../../../../utilities/prismaCalls");
+const { prisma, errorIfDoesntExist, prismaCall, getUniqueItem, updateRecord } = require("../../../../utilities/prismaCalls");
 const { removeProperties } = require("../../../../utilities/general");
 const { deleteFileBeforeThrow, buildFileObject } = require("../../../../utilities/fileManagement");
 const { formattedOutput } = require("../../../../utilities/consoleOutput");
-const { addTokenToBlacklist } = require("../../../../utilities/tokenManagement");
+const { addTokenToBlacklist, createNewToken, tokenExpAt } = require("../../../../utilities/tokenManagement");
+const { matchedData } = require("express-validator");
 
 async function update(req, res, next)
 {
+    console.log("CIAO DA UPDATE");
+}
 
+async function changePassword(req, res, next)
+{
+    // L'aver utilizzato il middleware "cascadePasswordsValidator" assicura che ...
+    // - i campi "password", "newPassword" e "confirmNew" siano validi,
+    // - i campi "newPassword" e "confirmNew" (trimmati) coincidano
+    // Resta da verificare che la password fornita sia valida e che sia quella effettivamente associata allo user richiedente l'operazione
+    const { password, newPassword } = matchedData(req);
+    try
+    {
+        // Si recuperano le informazioni relative allo user per verificare che la password sia corretta.
+        // L'utilizzo di "errorIfDoesntExist" è puramente formale poichè lo user, avendo richiesto l'operazione (essendo loggato) esiste sicuramente
+        let prismaQuery = { "where" : { "id" : req.tokenOwner.id } };
+        let user = await getUniqueItem("user", prismaQuery, errorIfDoesntExist, "USERS (PRIVATE) - CHANGE PASSWORD", "");
+        const checkPsw = await bcrypt.compare(password, user.password);
+        if (!checkPsw)
+            throw new ErrorInvalidData("password", "USERS (PRIVATE) - CHANGE PASSWORD");
+        // Una volta verificata l'autenticità della password fornita, si cripta la nuova password che sostituirà la precedente
+        const newHashedPsw = await bcrypt.hash(newPassword, parseInt(process.env.BCRYPT_SALT_ROUNDS));
+        // Si genera un nuovo token di modo che l'utente venga riloggato ed il vecchio token venga passato in black list
+        const newToken = createNewToken(user);
+        prismaQuery["data"] = { "password" : newHashedPsw, "tokenExpAt" : tokenExpAt(newToken) };
+        user = await updateRecord("user", prismaQuery, "USERS (PRIVATE) - CHANGE PASSWORD");
+        // Se l'operazione di update va a buon fine, si passa il vecchio token in black list
+        await addTokenToBlacklist(req.tokenOwner.token, "USERS (PRIVATE) - CHANGE PASSWORD");
+        formattedOutput("USERS (PRIVATE) - CHANGE PASSWORD", "***** Status: 200", "***** Password changed for user: ", user.id, "***** New token: ", newToken);
+        return res.json({ "userId" : user.id, "token" : newToken });
+    }
+    catch(error)
+    {
+        return next(error);
+    }
 }
 
 async function destroy(req, res, next)
@@ -75,4 +112,4 @@ async function destroy(req, res, next)
     }
 }
 
-module.exports = { update, destroy };
+module.exports = { update, changePassword, destroy };

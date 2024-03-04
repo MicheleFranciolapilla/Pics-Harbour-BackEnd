@@ -3,7 +3,6 @@ const { checkSchema, validationResult } = require("express-validator");
 const ErrorRequestValidation = require("../exceptions/ErrorRequestValidation");
 
 const { deleteFileBeforeThrow } = require("../../utilities/fileManagement");
-const { formattedOutput } = require("../../utilities/consoleOutput");
 
 /**
  * Middleware di gestione del risultato della validazione
