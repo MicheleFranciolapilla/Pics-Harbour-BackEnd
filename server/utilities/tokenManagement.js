@@ -2,6 +2,7 @@ const jwt = require("jsonwebtoken");
 
 const { tokenLifeTime } = require("./variables");
 const { removeProperties } = require("./general");
+const { formattedOutput } = require("./consoleOutput");
 const { noError, createRecord, getUniqueItem } = require("./prismaCalls");
 
 const tokenExpAt = (token) => new Date(jwt.decode(token).exp * 1000);
@@ -41,7 +42,19 @@ const checkIfAlreadyLogged = (tokenExpDateTime) =>
 }
 
 const addTokenToBlacklist = async (token, callerBlock) => 
-    await createRecord("tokensblacklist", { "data" : { "token" : token, "tokenExpAt" : tokenExpAt(token) } }, callerBlock);
+{
+    let success = true;
+    const expAt = tokenExpAt(token);
+    try
+    {
+        await createRecord("tokensblacklist", { "data" : { "token" : token, "tokenExpAt" : expAt } }, "");
+    }
+    catch(error)
+    {
+        success = false;
+    }
+    formattedOutput(`TOKEN BLACKLISTING BY ${callerBlock}`, "***** Token:", token, "***** Token expire time:", expAt, success ? "Token successfully blacklisted" : "Token not blacklisted, <<< UPDATE BLACK LIST MANUALLY >>>");
+}
 
 const checkIfBlacklisted = async (tokenToCheck, callerBlock) =>
 {

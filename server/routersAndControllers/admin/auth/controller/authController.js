@@ -8,7 +8,6 @@ const ErrorOperationRefused = require("../../../../exceptionsAndMiddlewares/exce
 const { errorIfExists, checkEmail, createRecord, getUser, updateRecord } = require("../../../../utilities/prismaCalls");
 const { removeProperties } = require("../../../../utilities/general");
 const { formattedOutput } = require("../../../../utilities/consoleOutput");
-const { tokenLifeTime } = require("../../../../utilities/variables");
 const { fileUploadReport, deleteFileBeforeThrow } = require("../../../../utilities/fileManagement");
 const { createNewToken, tokenExpAt, checkIfAlreadyLogged, addTokenToBlacklist, checkIfBlacklisted } = require("../../../../utilities/tokenManagement");
 
@@ -49,7 +48,7 @@ async function signUp(req, res, next)
         // A creazione utente avvenuta si genera il token
         token = createNewToken(user);
         // Dopo aver creato il token bisogna registrare la sua scadenza nel database, aggiornando il record user appena creato
-        prismaQuery = { "where" : { "id" : user.id }, "data" : { ...prismaQuery.data, "tokenExpAt" : tokenExpAt(token) }};
+        prismaQuery = { "where" : { "id" : user.id }, "data" : { "tokenExpAt" : tokenExpAt(token) }};
         user = await updateRecord("user", prismaQuery, "AUTH - SIGNUP / UPDATE");
         // Se anche l'update va a buon fine si restituisce il record dell'utente creato e completo del campo di scadenza token
         removeProperties([user], "password");
@@ -114,10 +113,7 @@ async function logIn(req, res, next)
         // Se lo user non è già loggato si procede con il logIn
         token = createNewToken(user);
         // Dopo aver creato il token bisogna registrare la sua scadenza nel database
-        let prismaQuery = { "where" : { "id" : user.id } };
-        removeProperties([user], "id", "createdAt", "updatedAt");
-        prismaQuery["data"] = { ...user, "tokenExpAt" : tokenExpAt(token) };
-        user = await updateRecord("user", prismaQuery, "AUTH - LOGIN");
+        user = await updateRecord("user", { "where" : { "id" : user.id }, "data" : { "tokenExpAt" : tokenExpAt(token) } });
         removeProperties([user], "password");
         formattedOutput("AUTH - LOGIN - SUCCESS", "***** Status: 200", "***** Logged user: ", user, "***** Token: ", token);
         return res.json({ user, token });
@@ -125,6 +121,7 @@ async function logIn(req, res, next)
     catch(error)
     {
         if (token)
+            // Se token è definito significa che l'errore è stato generato in fase di "updateRecord", ovvero l'operazione di "logIn" non ha avuto successo, di conseguenza il token generato va in black list
             await addTokenToBlacklist(token, "AUTH - LOGIN"); 
         return next(error);
     }
@@ -132,11 +129,13 @@ async function logIn(req, res, next)
 
 async function logOut(req, res, next)
 {
+    // Il "logOut" è da considerarsi avvenuto con successo solo quando il database è stato aggiornato con "tokenExpAt" a null
     try
     {
-        await addTokenToBlacklist(req.tokenOwner, "AUTH - LOGOUT");
-        formattedOutput("AUTH - LOGOUT - SUCCESS", "***** Status: 201", "***** Unlogged user Id: ", req.tokenOwner.id, "***** Token in black list: ", req.tokenOwner.token);
-        return res.status(201).json({ "Unlogged" : req.tokenOwner.id, "BlackListToken" : req.tokenOwner.token });
+        const user = await updateRecord("user", { "where" : { "id" : req.tokenOwner.id }, "data" : { "tokenExpAt" : null } }, "AUTH - LOGOUT");
+        await addTokenToBlacklist(req.tokenOwner.token, "AUTH - LOGOUT");
+        formattedOutput("AUTH - LOGOUT - SUCCESS", "***** Status: 200", "***** Unlogged user Id: ", req.tokenOwner.id);
+        return res.json({ "Unlogged" : req.tokenOwner.id });
     }
     catch(error)
     {

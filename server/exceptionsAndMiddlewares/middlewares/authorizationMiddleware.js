@@ -45,7 +45,8 @@ async function tokenVerifier(req, res, next)
                 {
                     "id"    :   parseInt(payload.id),
                     "role"  :   payload.role,
-                    ...(req.rolesAccessibility.token && { "token" : token, "exp" : payload.exp })
+                    ...(req.rolesAccessibility.token && { "token" : token })
+                    // ...(req.rolesAccessibility.token && { "token" : token, "exp" : payload.exp })
                 };
                 return next();
             }
