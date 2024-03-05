@@ -15,11 +15,11 @@ const validateParams = (req, res, next) =>
     return next();
 }
 
-const cascadeValidators = 
+const cascadePasswordsValidators = 
 [
     validationMiddleware(returnSchemaForPassword("password")),
     validationMiddleware(returnSchemaForPassword("newPassword")),
     validateParams
 ];
 
-module.exports = { cascadeValidators }
+module.exports = { cascadePasswordsValidators }

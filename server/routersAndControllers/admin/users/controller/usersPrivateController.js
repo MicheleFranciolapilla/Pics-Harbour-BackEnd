@@ -6,14 +6,81 @@ const ErrorInvalidData = require("../../../../exceptionsAndMiddlewares/exception
 
 const { prisma, errorIfDoesntExist, prismaCall, getUniqueItem, updateRecord } = require("../../../../utilities/prismaCalls");
 const { removeProperties } = require("../../../../utilities/general");
-const { deleteFileBeforeThrow, buildFileObject } = require("../../../../utilities/fileManagement");
+const { deleteFileBeforeThrow, buildFileObject, fileUploadReport } = require("../../../../utilities/fileManagement");
 const { formattedOutput } = require("../../../../utilities/consoleOutput");
 const { addTokenToBlacklist, createNewToken, tokenExpAt } = require("../../../../utilities/tokenManagement");
 const { matchedData } = require("express-validator");
 
 async function update(req, res, next)
 {
-    console.log("CIAO DA UPDATE");
+    const { name, surname, website, noThumb, noWebsite } = matchedData(req, { onlyValidData : true });
+    const { fileData } = req;
+    // Logica della funzione:
+    // Caso A:  "noThumb" non definito oppure "false"...
+    // A1:  non è stato richiesto il caricamento di alcun file immagine --> 
+    //      si tenta l'update dei dati, mantenendo l'eventuale file immagine corrente
+    // A2:  è stato richiesto il caricamento del file immagine ma è risultato non valido -->
+    //      si tenta l'update dei dati, mantenendo l'eventuale file immagine corrente
+    // A3:  è stato richiesto il caricamento del file immagine ed è risultato valido -->
+    //      si tenta l'update di tutto e, se va a buon fine, si rimuove il file immagine corrente, altrimenti si cancella il nuovo
+    // Caso B:  "noThumb" è "true"...
+    // B1:  non è stato richiesto il caricamento di alcun file immagine -->
+    //      si tenta l'update dei dati e, se va a buon fine, si rimuove il file immagine corrente
+    // B2:  è stato richiesto il caricamento del file immagine -->
+    //      si cancella dal server il file immagine nuovo (se risultato valido) e si esegue la stessa logica del punto B1  
+    // Comunque, al termine dell'operazione di update (se andata a buon fine) si rilogga l'utente, spostando in black list il token corrente
+    // Se l'update non va a buon fine, tutto viene lasciato invariato, inclusa l'eventuale presenza del file immagine corrente (anche con noThumb true)
+    // Se "noWebsite" è true significa che si intende rimuovere il campo "website" laddove presente
+    let newThumb = null;
+    if (fileData)
+        if (fileUploadReport(req).File_uploaded)
+            newThumb = req.file.filename;
+    try
+    {
+        // Si recupera il record relativo allo user per acquisire il campo "thumb" e quindi l'eventuale file immagine corrente
+        // L'utilizzo di "errorIfDoesntExist" è puramente formale poichè lo user, avendo richiesto l'operazione (essendo loggato) esiste sicuramente
+        let prismaQuery = { "where" : { "id" : req.tokenOwner.id } };
+        let user = await getUniqueItem("user", prismaQuery, errorIfDoesntExist, "USERS (PRIVATE) - UPDATE", "");
+        const currentThumb = user.thumb;
+        const newToken = createNewToken(user);
+        prismaQuery["data"] =
+        {
+            "name"          :   name ?? user.name,
+            "surname"       :   surname ?? user.surname,
+            "website"       :   noWebsite ? null : (website ?? user.website),
+            "thumb"         :   noThumb ? null : (newThumb || currentThumb),
+            "tokenExpAt"    :   tokenExpAt(newToken)
+        };
+        let updatedUser = await updateRecord("user", prismaQuery, "USERS (PRIVATE) - UPDATE");
+        // Se tutto va a buon fine.....
+        // prima di restituire la response bisogna sistemare gli eventuali file immagine nel server, come richiesto dalla "logica della funzione"
+        // se "noThumb" è truthy si cancellano il vecchio ed il nuovo file immagine (se presenti)
+        // se "noThumb" è falsy e "newThumb" truthy, allora si cancella il vecchio file immagine (se presente)
+        if (noThumb)
+        {
+            if (currentThumb)
+                await deleteFileBeforeThrow(buildFileObject(currentThumb), "USERS (PRIVATE) - UPDATE");
+            if (newThumb)
+                await deleteFileBeforeThrow(req.file, "USERS (PRIVATE) - UPDATE");
+        }
+        else if (newThumb && currentThumb)
+            await deleteFileBeforeThrow(buildFileObject(currentThumb), "USERS (PRIVATE) - UPDATE");
+        // Prima di concludere si sposta il vecchio token nella black list
+        await addTokenToBlacklist(req.tokenOwner.token, "USERS (PRIVATE) - UPDATE");
+        removeProperties([user, updatedUser], "password");
+        formattedOutput("USERS (private) - UPDATE", "***** Status: 200", "***** Previous: ", user, "***** Updated: ", updatedUser, "***** New token: ", newToken);
+        return res.json({ "previous" : {...user}, "updated" : {...updatedUser}, "token" : newToken });
+    }
+    catch(error)
+    {
+        // Si può giungere al blocco catch attraverso una delle seguenti chiamate:
+        // - 1: getUniqueItem
+        // - 2: updateRecord
+        // In entrambi i casi l'update non ha avuto luogo, quindi l'unica operazione da compiere prima di lanciare l'errore è cancellare l'eventuale nuovo file immagine
+        if (newThumb)
+            await deleteFileBeforeThrow(req.file, "USERS (PRIVATE) - UPDATE");
+        return next(error);
+    }
 }
 
 async function changePassword(req, res, next)
@@ -98,7 +165,7 @@ async function destroy(req, res, next)
             await deleteFileBeforeThrow(buildFileObject(prismaTransaction.deletedUser.thumb), "USERS (PRIVATE) - DESTROY");
         // ... e tutti i files immagine delle pictures associate allo user (codice unificato ma effettivamente eseguito solo per gli Admin)
         for (let index = 0; index < prismaTransaction.deletedUser.pictures.length; index++)
-            deleteFileBeforeThrow(buildFileObject(prismaTransaction.deletedUser.pictures[index].image), "USERS (PRIVATE) - DESTROY");
+            await deleteFileBeforeThrow(buildFileObject(prismaTransaction.deletedUser.pictures[index].image), "USERS (PRIVATE) - DESTROY");
         // Si aggiunge il token alla black list in modo da evitare conflitti in caso di riutilizzo, anche se con user cancellato
         await addTokenToBlacklist(tokenOwner.token, "USERS (PRIVATE) - DESTROY");
         return res.json({ "user" : {...prismaTransaction.deletedUser} });

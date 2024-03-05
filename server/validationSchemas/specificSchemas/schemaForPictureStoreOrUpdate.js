@@ -3,6 +3,7 @@
 const { tablePicturesColumnTitleSize, minTitleLength, maxDescriptionLength } = require("../../utilities/variables");
 
 const { returnSchemaForIdLikeParams } = require("../generalSchemas/schemaForIdLikeParams");
+const { returnSchemaForRegularBooleans } = require("../generalSchemas/schemaForRegularBooleans");
 
 // const userIdSchema = returnSchemaForIdLikeParams("userId", "body", true);
 const categoryIdSchema = returnSchemaForIdLikeParams("categoryId", "body", false);
@@ -56,19 +57,7 @@ const returnSchemaForPictureStoreOrUpdate = (isForStore) =>
                                                                             : value
                                                     }
                             },
-        visible         :   {
-                                in              :   ["body"],
-                                optional        :   true,
-                                isBoolean       :   {
-                                                        errorMessage    :   "The field 'visible' must be boolean: values accepted: [0, 1, false, true]",
-                                                        bail            :   true
-                                                    },
-                                customSanitizer :   {   options         :   (value) =>  
-                                                                            (value !== undefined)
-                                                                            ? ((value === true) || (value === "true") || (value == 1))
-                                                                            : undefined
-                                                    }
-                            },
+        visible         :   { ...returnSchemaForRegularBooleans("visible") },
         // ...userIdSchema,
         categories      :   {
                                 in              :   ["body"],
