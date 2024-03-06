@@ -11,6 +11,7 @@ const { deleteFileBeforeThrow } = require("../../utilities/fileManagement");
 // Poichè il middleware "validationOutcome", in caso di validazione non positiva, termina il processo, invocando un errore, c'è la necessità di provvedere preventivamente a cancellare l'eventuale file caricato da multer che, altrimenti, resterebbe salvato inutilmente nel server.
 const validationOutcome = async (req, res, next) =>
 {
+    console.log("VALIDATION MIDDLEWARE")
     const validationErrors = validationResult(req);
     if (!validationErrors.isEmpty())
     {
@@ -33,3 +34,5 @@ const validationOutcome = async (req, res, next) =>
  */
 
 module.exports = (schema) => [checkSchema(schema), validationOutcome];
+
+module.exports.validationOutcome = validationOutcome;

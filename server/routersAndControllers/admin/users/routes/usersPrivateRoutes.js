@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
  
 const { imageUploader } = require("../../../../exceptionsAndMiddlewares/middlewares/imageUploadMiddleware");
-const { cascadeUserUpdateValidators } = require("../../../../exceptionsAndMiddlewares/middlewares/cascadeUserUpdateValidator")
+const { cascadeUserUpdateValidators } = require("../../../../exceptionsAndMiddlewares/middlewares/cascadeUserUpdateValidator");
 const { cascadePasswordsValidators } = require("../../../../exceptionsAndMiddlewares/middlewares/cascadePasswordsValidator");
 
 const usersCtrl = require("../controller/usersPrivateController");

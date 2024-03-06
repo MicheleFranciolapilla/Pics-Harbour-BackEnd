@@ -13,7 +13,11 @@ const { matchedData } = require("express-validator");
 
 async function update(req, res, next)
 {
-    const { name, surname, website, noThumb, noWebsite } = matchedData(req, { onlyValidData : true });
+    const { name, surname, website, noThumb } = matchedData(req, { onlyValidData : true });
+    const { noWebsite } = req.body;
+    console.log("NOWEBSITE: ", noWebsite);
+    console.log("WEBSITE: ", website);
+    console.log("NAME: ", name);
     const { fileData } = req;
     // Logica della funzione:
     // Caso A:  "noThumb" non definito oppure "false"...

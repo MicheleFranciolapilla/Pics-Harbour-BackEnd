@@ -1,4 +1,6 @@
-const validationMiddleware = require("./validationMiddleware");
+const { checkSchema } = require("express-validator");
+
+const { validationOutcome } = require("./validationMiddleware");
 const { returnSchemaForRegularStrings } = require("../../validationSchemas/generalSchemas/schemaForRegularStrings");
 const { returnSchemaForRegularBooleans } = require("../../validationSchemas/generalSchemas/schemaForRegularBooleans");
 const { returnSchemaForUrl } = require("../../validationSchemas/generalSchemas/schemaForUrl");
@@ -11,33 +13,54 @@ removeProperties([schemaForName.name, schemaForSurname.surname], "notEmpty");
 schemaForName.name = addPropertyAtPosition(schemaForName.name, "optional", true, 1);
 schemaForSurname.surname = addPropertyAtPosition(schemaForSurname.surname, "optional", true, 1);
 
-let schemaForUserUpdate =
+const checkAndSetNoWebsite = (req) =>
 {
-    ...schemaForName,
-    ...schemaForSurname,
-    noThumb : { ...returnSchemaForRegularBooleans("noThumb") },
-};
-
-const checkNoWebsite = (req, res, next) =>
-{
+    let result = false;
     const { noWebsite } = req.body;
     if (noWebsite)
     {
         if (isTruthyBooleanParam(noWebsite))
         {
             req.body.noWebsite = true;
-            return next();
+            result = true;
         }
         else
             delete req.body.noWebsite;
     }
-    schemaForUserUpdate["website"] = { ...returnSchemaForUrl().website };
-};
+    return result;
+}
 
-const cascadeUserUpdateValidators =
-[
-    checkNoWebsite,
-    validationMiddleware(schemaForUserUpdate)
-];
+const dynamicSchemaGenerator = (req, res, next) =>
+{
+    const dynamicSchema =
+    {
+        ...schemaForName,
+        ...schemaForSurname,
+        noThumb : { ...returnSchemaForRegularBooleans("noThumb") },
+        ...(checkAndSetNoWebsite(req) ? {} : { website : returnSchemaForUrl().website })
+    }
+    req.dynamicSchema = dynamicSchema;
+    next();
+}
+
+const dynamicSchemaExecutor = (req, res, next) =>
+{
+    const middlewaresChain = checkSchema(req.dynamicSchema);
+    let middlewareIndex = 0;
+    const runNextMiddleware = () =>
+    {
+        if (middlewareIndex < middlewaresChain.length)
+        {
+            const currentMiddleware = middlewaresChain[middlewareIndex];
+            middlewareIndex++;
+            currentMiddleware(req, res, runNextMiddleware);
+        }
+        else
+            next();
+    }
+    runNextMiddleware();
+}
+
+const cascadeUserUpdateValidators = [dynamicSchemaGenerator, dynamicSchemaExecutor, validationOutcome];
 
 module.exports = { cascadeUserUpdateValidators }

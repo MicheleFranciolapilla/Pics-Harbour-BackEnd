@@ -80,6 +80,6 @@ const basicSlug = (stringToSlug, slugChar = "-") => stringToSlug.replaceAll(" ",
  */
 const isDivisibleBY = (numberToCheck, divisor) => (numberToCheck % divisor === 0);
 
-const isTruthyBooleanParam = (paramToCheck) => ((paramToCheck === true) || (paramToCheck === "true") || (paramToCheck === "TRUE") || (paramToCheck == 1));
+const isTruthyBooleanParam = (paramToCheck) => ((paramToCheck === true) || (paramToCheck === "true") || (paramToCheck == 1));
 
 module.exports = { removeProperties, addPropertyAtPosition, normalizeSpaces, upperStartingChar, basicSlug, isDivisibleBY, isTruthyBooleanParam }
