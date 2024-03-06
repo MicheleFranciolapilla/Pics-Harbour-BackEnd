@@ -3,6 +3,14 @@ const { returnSchemaForPassword } = require("../../validationSchemas/generalSche
 
 const ErrorRequestValidation = require("../exceptions/ErrorRequestValidation");
 
+/**
+ * @function
+ * Middleware incaricato di gestire condizionatamente la validazione delle password per la rotta di modifica password
+ * @param {Object} req 
+ * @param {Object} res 
+ * @param {Function} next 
+ * @returns {Error|any}
+ */
 const validateParams = (req, res, next) =>
 {
     const { password, newPassword, confirmNew } = req.body;
@@ -15,6 +23,8 @@ const validateParams = (req, res, next) =>
     return next();
 }
 
+// Array con i middlewares di validazione di tutte le passwords per la rotta di modifica password.
+// Le passwords vengono validate in sequenza, a partire da quella corrente
 const cascadePasswordsValidators = 
 [
     validationMiddleware(returnSchemaForPassword("password")),

@@ -4,8 +4,8 @@ const { normalizeSpaces, basicSlug, isDivisibleBY } = require("./general");
 // Il valore di accesso dei ruoli è espresso mediante numeri primi
 const roleAccessData =   
 {
-    "admin"         :   { "prime" : 2 },
-    "super-admin"   :   { "prime" : 3 }
+    "publisher" :   { "prime" : 2 },
+    "admin"     :   { "prime" : 3 }
 };
 
 /**

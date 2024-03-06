@@ -13,6 +13,12 @@ removeProperties([schemaForName.name, schemaForSurname.surname], "notEmpty");
 schemaForName.name = addPropertyAtPosition(schemaForName.name, "optional", true, 1);
 schemaForSurname.surname = addPropertyAtPosition(schemaForSurname.surname, "optional", true, 1);
 
+/**
+ * @function
+ * Funzione incaricata di settare correttamente il valore del parametro "noWebsite" nella request, preparando la strada al generatore dello schema dinamico
+ * @param {Object} req - Express request object
+ * @returns {boolean} - Valore booleano identificativo del valore del parametro "noWebsite"
+ */
 const checkAndSetNoWebsite = (req) =>
 {
     let result = false;
@@ -30,6 +36,13 @@ const checkAndSetNoWebsite = (req) =>
     return result;
 }
 
+/**
+ * @function
+ * Funzione incaricata di generare dinamicamente lo schema (per express-validator), includendo o meno il campo "website" in funzione del valore di "noWebsite"
+ * @param {Object} req 
+ * @param {Object} res 
+ * @param {Function} next 
+ */
 const dynamicSchemaGenerator = (req, res, next) =>
 {
     const dynamicSchema =
@@ -43,6 +56,13 @@ const dynamicSchemaGenerator = (req, res, next) =>
     next();
 }
 
+/**
+ * @function
+ * Funzione incaricata di eseguire tutta la catena di validazioni generata da "checkSchema" in funzione dello schema dinamico
+ * @param {Object} req 
+ * @param {Object} res 
+ * @param {Function} next 
+ */
 const dynamicSchemaExecutor = (req, res, next) =>
 {
     const middlewaresChain = checkSchema(req.dynamicSchema);
@@ -61,6 +81,7 @@ const dynamicSchemaExecutor = (req, res, next) =>
     runNextMiddleware();
 }
 
+// Array contenente la sequenza dei middlewares di generazione, esecuzione e validazione dello schema dinamico
 const cascadeUserUpdateValidators = [dynamicSchemaGenerator, dynamicSchemaExecutor, validationOutcome];
 
 module.exports = { cascadeUserUpdateValidators }

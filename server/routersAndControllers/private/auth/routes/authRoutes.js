@@ -11,7 +11,7 @@ const authCtrl = require("../controller/authController");
 
 router.post("/signup", imageUploader, validationMiddleware(schemaForSignUp), authCtrl.signUp);
 router.post("/login", validationMiddleware(schemaForLogIn), authCtrl.logIn);
-router.post("/logout", (req, res, next) => authorizationMiddleware(true, "Admin", "Super Admin")(req, res, next), authCtrl.logOut);
+router.post("/logout", (req, res, next) => authorizationMiddleware(true, "Publisher", "Admin")(req, res, next), authCtrl.logOut);
 router.post("/checktoken", authCtrl.checkToken);
 
 module.exports = router;

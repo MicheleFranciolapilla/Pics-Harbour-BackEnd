@@ -12,7 +12,7 @@ const { fileUploadReport, deleteFileBeforeThrow } = require("../../../../utiliti
 const { createNewToken, tokenExpAt, checkIfAlreadyLogged, addTokenToBlacklist, checkIfBlacklisted } = require("../../../../utilities/tokenManagement");
 
 /**
- * Consente la registrazione di un nuovo utente (Admin). Nel caso di esito positivo effettua il logIn dello stesso.
+ * Consente la registrazione di un nuovo utente (Publisher). Nel caso di esito positivo effettua il logIn dello stesso.
  * La registrazione va a buon fine se, oltre alla positiva validazione dei dati forniti, l'email risulta NON già presente nel database
  * @function
  * @async

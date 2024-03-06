@@ -26,7 +26,7 @@ const validationOutcome = async (req, res, next) =>
 }
 
 /**
- * Il middleware esportato restituisce, alle rotte chiamanti, un array con due ulteriori middlewares: 
+ * Il middleware esportato restituisce, alle rotte chiamanti, un array con due elementi: 
  * il checkSchema di express validator ed il middleware custom di gestione del risultato della validazione
  *
  * @param {Object} schema - Lo schema di validazione da applicare ai parametri della richiesta

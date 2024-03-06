@@ -5,14 +5,14 @@ const express = require("express");
 
 // Importazione routers & controllers
 // Parte pubblica
-const home = require("./server/routersAndControllers/guest/home/controller/homeController");
-const usersPublicRoutes = require("./server/routersAndControllers/guest/users/routes/usersPublicRoutes");
+const home = require("./server/routersAndControllers/public/home/controller/homeController");
+const usersPublicRoutes = require("./server/routersAndControllers/public/users/routes/usersPublicRoutes");
 // Autenticazione
-const authRoutes = require("./server/routersAndControllers/admin/auth/routes/authRoutes");
+const authRoutes = require("./server/routersAndControllers/private/auth/routes/authRoutes");
 // Parte Privata
-const usersPrivateRoutes = require("./server/routersAndControllers/admin/users/routes/usersPrivateRoutes");
-const picturesPrivateRoutes = require("./server/routersAndControllers/admin/pictures/routes/picturesPrivateRoutes");
-const categoriesPrivateRoutes = require("./server/routersAndControllers/admin/categories/routes/categoriesPrivateRoutes");
+const usersPrivateRoutes = require("./server/routersAndControllers/private/users/routes/usersPrivateRoutes");
+const picturesPrivateRoutes = require("./server/routersAndControllers/private/pictures/routes/picturesPrivateRoutes");
+const categoriesPrivateRoutes = require("./server/routersAndControllers/private/categories/routes/categoriesPrivateRoutes");
 
 // Importazione middlewares
 const authorizationMiddleware = require("./server/exceptionsAndMiddlewares/middlewares/authorizationMiddleware");
@@ -44,12 +44,12 @@ server.use("/auth", authRoutes);
 // Nel caso specifico, la sintassi è assimilabile alla seguente:
 // (req, res, next) => 
 // {
-//    const middlewareFunction = authorizationMiddleware("Super Admin");
+//    const middlewareFunction = authorizationMiddleware("Admin");
 //    middlewareFunction(req, res, next);
 // }
-server.use("/users", (req, res, next) => authorizationMiddleware(true, "Admin", "Super Admin")(req, res, next), usersPrivateRoutes);
-server.use("/pictures", (req, res, next) => authorizationMiddleware(false, "Admin")(req, res, next), picturesPrivateRoutes);
-server.use("/categories", (req, res, next) => authorizationMiddleware(false, "Super Admin")(req, res, next), categoriesPrivateRoutes);
+server.use("/users", (req, res, next) => authorizationMiddleware(true, "Publisher", "Admin")(req, res, next), usersPrivateRoutes);
+server.use("/pictures", (req, res, next) => authorizationMiddleware(false, "Publisher")(req, res, next), picturesPrivateRoutes);
+server.use("/categories", (req, res, next) => authorizationMiddleware(false, "Admin")(req, res, next), categoriesPrivateRoutes);
 
 // Middlewares errori
 server.use(route404);

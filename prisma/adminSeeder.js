@@ -2,15 +2,15 @@ const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const bcrypt = require("bcrypt");
 
-// Una volta aggiunta, in package.json la proprietà <<< "prisma": {"seed": "node prisma/superAdminSeeder.js"} >>>, 
+// Una volta aggiunta, in package.json la proprietà <<< "prisma": {"seed": "node prisma/adminSeeder.js"} >>>, 
 // il seeder viene automaticamente eseguito ad ogni <<< npx prisma migrate dev >>> e <<< npx prisma migrate reset >>> e <<< npx prisma db seed >>>
 // a meno di specificare il flag <<< --skip-seed >>
 
-async function seedSuperAdmin()
+async function seedAdmin()
 {
     const nameParts = process.env.USER_FOR_SEEDING.split(" ");
     const hashedPsw = await bcrypt.hash(process.env.PSW_FOR_SEEDING, parseInt(process.env.BCRYPT_SALT_ROUNDS));
-    const superAdmin = await prisma.user.upsert(
+    const admin = await prisma.user.upsert(
         {
             "where"     :   {   "email"     :   process.env.MAIL_FOR_SEEDING },
             "update"    :   {},
@@ -24,7 +24,7 @@ async function seedSuperAdmin()
         });
 }
 
-seedSuperAdmin()
+seedAdmin()
     .then( async () => await prisma.$disconnect())
     .catch( async (error) =>
         {

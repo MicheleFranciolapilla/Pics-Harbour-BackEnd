@@ -1,5 +1,5 @@
 /**
-* Exception generata a seguito di richiesta di operazione non eseguibile (esempio: cancellazione dell'unico Super Admin)
+* Exception generata a seguito di richiesta di operazione non eseguibile (esempio: cancellazione dell'unico Admin)
 * @class
 * @extends Error
 */

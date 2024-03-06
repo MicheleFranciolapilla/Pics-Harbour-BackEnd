@@ -14,7 +14,7 @@ async function store(req, res, next)
     const { file } = req;
     if (!file)
         return next(new ErrorRequestValidation("Image file not found into the request. Be sure to set the correct Content-Type as 'multipart/form-data' in order to upload the file.", "CATEGORIES (private) - STORE"));
-    // Superata la barriera del middleware autorizzativo, si può essere certi che lo user che ha richiesto l'operazione è un "Super Admin", esistente e loggato.
+    // Superata la barriera del middleware autorizzativo, si può essere certi che lo user che ha richiesto l'operazione è un "Admin", esistente e loggato.
     const nameSlug = basicSlug(name);
     try
     {
@@ -40,10 +40,10 @@ async function update(req, res, next)
     // Indipendentemente dalla modifica del "name" e/o del file, è possibile richiedere la disconnessione della category dalle pictures ad essa collegate.
     // Per la disconnessione bisogna includere nel body della request il campo "disconnect" con valore true
     // Se si richiede la disconnessione contestualmente all'update (nuovo "name" e/o nuovo file), allora essa ha luogo solo ad update avvenuto con successo.
-    // A seguito dell'eventuale update, la userId della category sarà quella del Super Admin che ne ha richiesto la modifica
+    // A seguito dell'eventuale update, la userId della category sarà quella dell'Admin che ne ha richiesto la modifica
     const { id, name, disconnect } = matchedData(req, { onlyValidData : true });
     const { fileData } = req;
-    // Se il middleware autorizzativo ha permesso di giungere fin quì significa che il richiedente è un Super Admin, quindi non si effettua il check in tal senso.
+    // Se il middleware autorizzativo ha permesso di giungere fin quì significa che il richiedente è un Admin, quindi non si effettua il check in tal senso.
     let responseObj = {};
     let prismaQuery = { "where" : { "id" : id }, "include" : { "pictures" : { "select" : { "id" : true } } } };
     let categoryIdCheck = {};
@@ -152,7 +152,7 @@ async function update(req, res, next)
 
 async function destroy(req, res, next)
 {
-    // La cancellazione della categoria è permessa ai soli "Super Admin", a prescindere che il richiedente sia l'effettivo creatore o ultimo modificatore della stessa.
+    // La cancellazione della categoria è permessa ai soli "Admin", a prescindere che il richiedente sia l'effettivo creatore o ultimo modificatore della stessa.
     const { id } = matchedData(req, { onlyValidData : true });
     // Il controllo di esistenza e la generazione degli eventuali, conseguenti errori, vengono effettuati direttamente all'interno della funzione "deleteRecord"
     try
