@@ -82,4 +82,18 @@ const isDivisibleBY = (numberToCheck, divisor) => (numberToCheck % divisor === 0
 
 const isTruthyBooleanParam = (paramToCheck) => ((paramToCheck === true) || (paramToCheck === "true") || (paramToCheck == 1));
 
-module.exports = { removeProperties, addPropertyAtPosition, normalizeSpaces, upperStartingChar, basicSlug, isDivisibleBY, isTruthyBooleanParam }
+const deepFindAndReplace = (objectToScan, keyToFind, valueToFind, newValue) =>
+{
+    if ((objectToScan !== null) && (typeof objectToScan === "object"))
+    {
+        Object.keys(objectToScan).forEach( key =>
+            {
+                if ((key === keyToFind) && (objectToScan[key] === valueToFind))
+                    objectToScan[key] = newValue;
+                else if (typeof objectToScan[key] === "object")
+                    deepFindAndReplace(objectToScan[key], keyToFind, valueToFind, newValue);
+            });
+    }
+}
+
+module.exports = { removeProperties, addPropertyAtPosition, normalizeSpaces, upperStartingChar, basicSlug, isDivisibleBY, isTruthyBooleanParam, deepFindAndReplace }
