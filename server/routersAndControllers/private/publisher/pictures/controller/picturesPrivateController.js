@@ -2,13 +2,13 @@ const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const { matchedData } = require("express-validator");
 
-const ErrorResourceNotFound = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorResourceNotFound");
-const ErrorUserNotAllowed = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorUserNotAllowed");
-const ErrorRequestValidation = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorRequestValidation");
+const ErrorResourceNotFound = require("../../../../../exceptionsAndMiddlewares/exceptions/ErrorResourceNotFound");
+const ErrorUserNotAllowed = require("../../../../../exceptionsAndMiddlewares/exceptions/ErrorUserNotAllowed");
+const ErrorRequestValidation = require("../../../../../exceptionsAndMiddlewares/exceptions/ErrorRequestValidation");
 
-const { findAllCategories, createRecord, checkPictureOwnership, updateRecord, deletePictureIfOwner } = require("../../../../utilities/prismaCalls");
-const { deleteFileBeforeThrow, buildFileObject } = require("../../../../utilities/fileManagement");
-const { formattedOutput } = require("../../../../utilities/consoleOutput");
+const { findAllCategories, createRecord, checkPictureOwnership, updateRecord, deletePictureIfOwner } = require("../../../../../utilities/prismaCalls");
+const { deleteFileBeforeThrow, buildFileObject } = require("../../../../../utilities/fileManagement");
+const { formattedOutput } = require("../../../../../utilities/consoleOutput");
 
 // Crud Store su rotta pictures (private)
 async function store(req, res, next)

@@ -11,8 +11,8 @@ const usersPublicRoutes = require("./server/routersAndControllers/public/users/r
 const authRoutes = require("./server/routersAndControllers/private/auth/routes/authRoutes");
 // Parte Privata
 const usersPrivateRoutes = require("./server/routersAndControllers/private/users/routes/usersPrivateRoutes");
-const picturesPrivateRoutes = require("./server/routersAndControllers/private/pictures/routes/picturesPrivateRoutes");
-const categoriesPrivateRoutes = require("./server/routersAndControllers/private/categories/routes/categoriesPrivateRoutes");
+const picturesPrivateRoutes = require("./server/routersAndControllers/private/publisher/pictures/routes/picturesPrivateRoutes");
+const categoriesPrivateRoutes = require("./server/routersAndControllers/private/admin/categories/routes/categoriesPrivateRoutes");
 
 // Importazione middlewares
 const authorizationMiddleware = require("./server/exceptionsAndMiddlewares/middlewares/authorizationMiddleware");
@@ -36,7 +36,7 @@ server.use(express.json());
 server.use(express.urlencoded({ extended : true }));
 // Rotte pubbliche
 server.get("/", home);
-server.use("/users", usersPublicRoutes);
+server.use("/guest/users", usersPublicRoutes);
 // Rotte di autenticazione
 server.use("/auth", authRoutes);
 // Rotte private
@@ -47,9 +47,9 @@ server.use("/auth", authRoutes);
 //    const middlewareFunction = authorizationMiddleware("Admin");
 //    middlewareFunction(req, res, next);
 // }
-server.use("/users", (req, res, next) => authorizationMiddleware(true, "Publisher", "Admin")(req, res, next), usersPrivateRoutes);
-server.use("/pictures", (req, res, next) => authorizationMiddleware(false, "Publisher")(req, res, next), picturesPrivateRoutes);
-server.use("/categories", (req, res, next) => authorizationMiddleware(false, "Admin")(req, res, next), categoriesPrivateRoutes);
+server.use("/private/users", (req, res, next) => authorizationMiddleware(true, "Publisher", "Admin")(req, res, next), usersPrivateRoutes);
+server.use("/publisher/pictures", (req, res, next) => authorizationMiddleware(false, "Publisher")(req, res, next), picturesPrivateRoutes);
+server.use("/admin/categories", (req, res, next) => authorizationMiddleware(false, "Admin")(req, res, next), categoriesPrivateRoutes);
 
 // Middlewares errori
 server.use(route404);

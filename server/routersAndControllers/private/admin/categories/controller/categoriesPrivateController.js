@@ -1,12 +1,12 @@
 const { matchedData } = require("express-validator");
 
-const ErrorUnsupportedFile = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorUnsupportedFile");
-const ErrorRequestValidation = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorRequestValidation");
+const ErrorUnsupportedFile = require("../../../../../exceptionsAndMiddlewares/exceptions/ErrorUnsupportedFile");
+const ErrorRequestValidation = require("../../../../../exceptionsAndMiddlewares/exceptions/ErrorRequestValidation");
 
-const { errorIfExists, errorIfDoesntExist, checkSlug, createRecord, updateRecord, deleteRecord, getUniqueItem } = require("../../../../utilities/prismaCalls");
-const { basicSlug, removeProperties } = require("../../../../utilities/general");
-const { deleteFileBeforeThrow, buildFileObject, fileUploadReport } = require("../../../../utilities/fileManagement");
-const { formattedOutput } = require("../../../../utilities/consoleOutput");
+const { errorIfExists, errorIfDoesntExist, checkSlug, createRecord, updateRecord, deleteRecord, getUniqueItem } = require("../../../../../utilities/prismaCalls");
+const { basicSlug, removeProperties } = require("../../../../../utilities/general");
+const { deleteFileBeforeThrow, buildFileObject, fileUploadReport } = require("../../../../../utilities/fileManagement");
+const { formattedOutput } = require("../../../../../utilities/consoleOutput");
 
 async function store(req, res, next)
 {

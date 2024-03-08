@@ -148,7 +148,7 @@ const imageUploader = async (req, res, next) =>
 
     // In primo luogo si acquisiscono metodo usato e rotta base, dalla request
     const routeMethod = req.method.toUpperCase();
-    const dbTable = (req.baseUrl.toLowerCase() === "/auth") ? "users" : req.baseUrl.substring(1).toLowerCase();
+    const dbTable = (req.baseUrl.toLowerCase() === "/auth") ? "users" : req.baseUrl.substring(1).split("/")[1].toLowerCase();
     const fileParams = imgFileParams[dbTable];
 
     await checkHTTPContentType(req, res, next);

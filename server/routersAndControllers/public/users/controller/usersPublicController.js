@@ -5,7 +5,8 @@ const { matchedData } = require("express-validator");
 const ErrorFromDB = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorFromDB");
 const ErrorResourceNotFound = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorResourceNotFound");
 
-const { prismaOperator, removeProperties } = require("../../../../utilities/general");
+const { errorIfDoesntExist, prismaCall, getUniqueItem } = require("../../../../utilities/prismaCalls");
+const { removeProperties } = require("../../../../utilities/general");
 const { formattedOutput } = require("../../../../utilities/consoleOutput");
 
 /**
@@ -19,13 +20,21 @@ const { formattedOutput } = require("../../../../utilities/consoleOutput");
  */
 async function index(req, res, next)
 {
-    const allUsers = await prismaOperator(prisma, "user", "findMany", {});
-    if (!allUsers.success)
-        return next(new ErrorFromDB("Service temporarily unavailable", 503, "USERS (PUBLIC) - INDEX")); 
-    const users = allUsers.data;
-    removeProperties(users, "password");
-    formattedOutput("USERS (PUBLIC) - ALLUSERS - SUCCESS", "***** Status: 200", "***** Users: ", users);
-    return res.json({ users });
+    try
+    {
+        let users = await prismaCall("user", "findMany", { "include" : { "pictures" : true, "categories" : true } }, "USERS (PUBLIC) - INDEX");
+        users.forEach( user =>
+            {
+                const fieldToRemove = (user.role === "Admin") ? "pictures" : "categories";
+                removeProperties([user], "password", "tokenExpAt", fieldToRemove);
+            });
+        formattedOutput("USERS (PUBLIC) - ALLUSERS - SUCCESS", "***** Status: 200", "***** Users: ", users);
+        return res.json({ users });
+    }
+    catch(error)
+    {
+        return next(error);
+    }
 }
 
 /**
@@ -40,22 +49,23 @@ async function index(req, res, next)
 async function show(req, res, next)
 {
     const { id } = matchedData(req, { onlyValidData : true });
-    const prismaQuery = {
-                            "where"     :   {   "id"            :   id },
-                            "include"   :   {
-                                                "pictures"      :   true,
-                                                "categories"    :   true
-                                            }  
-                        };
-    const userToShow = await prismaOperator(prisma, "user", "findUnique", prismaQuery);
-    if (!userToShow.success)
-        return next(new ErrorFromDB("Service temporarily unavailable", 503, "USERS (PUBLIC) - SHOW"));
-    else if (!userToShow.data)
-        return next(new ErrorResourceNotFound("User", "USERS (PUBLIC) - SHOW"));
-    const user = userToShow.data;
-    removeProperties([user], "password");
-    formattedOutput("USERS (PUBLIC) - SHOW USER - SUCCESS", "***** Status: 200", "***** User: ", user);
-    return res.json({ user });
+    const prismaQuery =
+    {
+        "where"     :   { "id" : id },
+        "include"   :   { "pictures" : true, "categories" : true }
+    };
+    try
+    {
+        let user = await getUniqueItem("user", prismaQuery, errorIfDoesntExist, "USERS (PUBLIC) - SHOW", `User Id [${id}]`);
+        const fieldToRemove = (user.role === "Admin") ? "pictures" : "categories";
+        removeProperties([user], "password", "tokenExpAt", fieldToRemove);
+        formattedOutput("USERS (PUBLIC) - SHOW USER - SUCCESS", "***** Status: 200", "***** User: ", user);
+        return res.json({ user });
+    }
+    catch(error)
+    {
+        return next(error);
+    }
 }
 
 module.exports = { index, show };

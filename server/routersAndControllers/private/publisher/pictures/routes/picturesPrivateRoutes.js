@@ -1,10 +1,10 @@
 const express = require("express");
 const router = express.Router();
 
-const { imageUploader } = require("../../../../exceptionsAndMiddlewares/middlewares/imageUploadMiddleware");
-const validationMiddleware = require("../../../../exceptionsAndMiddlewares/middlewares/validationMiddleware");
-const { returnSchemaForPictureStoreOrUpdate } = require("../../../../validationSchemas/specificSchemas/schemaForPictureStoreOrUpdate");
-const { returnSchemaForIdLikeParams } = require("../../../../validationSchemas/generalSchemas/schemaForIdLikeParams");
+const { imageUploader } = require("../../../../../exceptionsAndMiddlewares/middlewares/imageUploadMiddleware");
+const validationMiddleware = require("../../../../../exceptionsAndMiddlewares/middlewares/validationMiddleware");
+const { returnSchemaForPictureStoreOrUpdate } = require("../../../../../validationSchemas/specificSchemas/schemaForPictureStoreOrUpdate");
+const { returnSchemaForIdLikeParams } = require("../../../../../validationSchemas/generalSchemas/schemaForIdLikeParams");
  
 const schemaForUpdate = 
 {
