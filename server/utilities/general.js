@@ -96,4 +96,7 @@ const deepFindAndReplace = (objectToScan, keyToFind, valueToFind, newValue) =>
     }
 }
 
-module.exports = { removeProperties, addPropertyAtPosition, normalizeSpaces, upperStartingChar, basicSlug, isDivisibleBY, isTruthyBooleanParam, deepFindAndReplace }
+const objectDeepCopy = (originalObject) => JSON.parse(JSON.stringify(originalObject));
+
+module.exports = 
+{ removeProperties, addPropertyAtPosition, normalizeSpaces, upperStartingChar, basicSlug, isDivisibleBY, isTruthyBooleanParam, deepFindAndReplace, objectDeepCopy }
