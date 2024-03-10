@@ -8,11 +8,12 @@ const express = require("express");
 const home = require("./server/routersAndControllers/public/home/controller/homeController");
 const usersPublicRoutes = require("./server/routersAndControllers/public/users/routes/usersPublicRoutes");
 // Autenticazione
-const authRoutes = require("./server/routersAndControllers/private/auth/routes/authRoutes");
+const authRoutes = require("./server/routersAndControllers/auth/routes/authRoutes");
 // Parte Privata
 const usersPrivateRoutes = require("./server/routersAndControllers/private/users/routes/usersPrivateRoutes");
 const picturesPrivateRoutes = require("./server/routersAndControllers/private/publisher/pictures/routes/picturesPrivateRoutes");
 const categoriesPrivateRoutes = require("./server/routersAndControllers/private/admin/categories/routes/categoriesPrivateRoutes");
+const dbCleanerRoutes = require("./server/routersAndControllers/private/admin/dbCleaner/routes/dbCleanerRoutes");
 
 // Importazione middlewares
 const authorizationMiddleware = require("./server/exceptionsAndMiddlewares/middlewares/authorizationMiddleware");
@@ -50,6 +51,7 @@ server.use("/auth", authRoutes);
 server.use("/private/users", (req, res, next) => authorizationMiddleware(true, "Publisher", "Admin")(req, res, next), usersPrivateRoutes);
 server.use("/publisher/pictures", (req, res, next) => authorizationMiddleware(false, "Publisher")(req, res, next), picturesPrivateRoutes);
 server.use("/admin/categories", (req, res, next) => authorizationMiddleware(false, "Admin")(req, res, next), categoriesPrivateRoutes);
+server.use("/admin/dbcleaner", (req, res, next) => authorizationMiddleware(false, "Admin")(req, res, next), dbCleanerRoutes);
 
 // Middlewares errori
 server.use(route404);

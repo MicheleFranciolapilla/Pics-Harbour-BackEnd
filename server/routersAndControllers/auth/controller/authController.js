@@ -2,14 +2,14 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const { matchedData } = require("express-validator");
 
-const ErrorInvalidData = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorInvalidData");
-const ErrorOperationRefused = require("../../../../exceptionsAndMiddlewares/exceptions/ErrorOperationRefused");
+const ErrorInvalidData = require("../../../exceptionsAndMiddlewares/exceptions/ErrorInvalidData");
+const ErrorOperationRefused = require("../../../exceptionsAndMiddlewares/exceptions/ErrorOperationRefused");
 
-const { errorIfExists, checkEmail, createRecord, getUser, updateRecord } = require("../../../../utilities/prismaCalls");
-const { removeProperties } = require("../../../../utilities/general");
-const { formattedOutput } = require("../../../../utilities/consoleOutput");
-const { fileUploadReport, deleteFileBeforeThrow } = require("../../../../utilities/fileManagement");
-const { createNewToken, tokenExpAt, checkIfAlreadyLogged, addTokenToBlacklist, checkIfBlacklisted } = require("../../../../utilities/tokenManagement");
+const { errorIfExists, checkEmail, createRecord, getUser, updateRecord } = require("../../../utilities/prismaCalls");
+const { removeProperties } = require("../../../utilities/general");
+const { formattedOutput } = require("../../../utilities/consoleOutput");
+const { fileUploadReport, deleteFileBeforeThrow } = require("../../../utilities/fileManagement");
+const { createNewToken, tokenExpAt, checkIfAlreadyLogged, addTokenToBlacklist, checkIfBlacklisted } = require("../../../utilities/tokenManagement");
 
 /**
  * Consente la registrazione di un nuovo utente (Publisher). Nel caso di esito positivo effettua il logIn dello stesso.
