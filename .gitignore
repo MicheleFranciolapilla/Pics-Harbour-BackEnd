@@ -6,3 +6,4 @@ out/
 .env
 notes.txt
 toDoNext.txt
+db-cleaner/reports

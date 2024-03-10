@@ -6,7 +6,7 @@ const reportFileData =
 
 const allowedActions = ["clean", "set", "reset"];
 
-const timerMinValue = 6000; /* 6 secondi */
+const timerMinValue = 60000; /* 1 minuto */
 
 const configData =
 [

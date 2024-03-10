@@ -6,6 +6,8 @@ const { formattedOutput } = require("../server/utilities/consoleOutput");
 const { reportFileData, allowedActions, timerMinValue, configData, cleanerOutcome } = require("./cleanerConfig");
 const { prisma } = require("../server/utilities/prismaCalls");
 
+const ErrorUnsupportedFile = require("../server/exceptionsAndMiddlewares/exceptions/ErrorUnsupportedFile");
+
 let cleanerIsRunning = false;
 let intervalId = 0;
 let intervalTime = 0;
@@ -33,6 +35,7 @@ const setCleaner = (timer) =>
 {
     setIntervalTime(timer);
     intervalId = setInterval(clean, intervalTime);
+    setTimeout(clean, 0);
     console.log("JUST SET. IntervalID = ", intervalId);
     console.log("INTERVAL TIME = ", intervalTime);
 }
@@ -40,7 +43,6 @@ const setCleaner = (timer) =>
 const createFolderIfMissing = async () =>
 {
     const folder = path.join(__dirname, reportFileData.folder);
-    console.log("FOLDER: ", folder);
     try
     {
         await fileSystem.access(folder);
@@ -61,14 +63,16 @@ const getFileContent = async (completeFileName) =>
         const fileContentString = await fileSystem.readFile(completeFileName, "utf-8");
         fileContentData = JSON.parse(fileContentString);
         if (!Array.isArray(fileContentData))
-            throw new Error(`Error: the content of the file ${completeFileName} is not an array.`);
+            throw new ErrorUnsupportedFile(`Error: the file ${completeFileName} must be a JSON file and its content must be an array of objects`, `DB CLEANER - READING FILE ${completeFileName}`);
     }
     catch(error)
     {
         if (error.code === "ENOENT")
             console.log("File didn't exist. It will be created.");
-        else
+        else if (error instanceof ErrorUnsupportedFile)
             throw error;
+        else 
+            throw new Error(`Error occurred while accessing the file ${completeFileName}`);
     }
     return fileContentData;
 }
@@ -100,12 +104,16 @@ const clean = async () =>
                     const currentAction = actionsCopy[index];
                     let dbValues = await instance[currentAction.model].findMany(currentAction.queryForFind);
                     let dbCounts = await instance[currentAction.model][currentAction.method](currentAction.query);
-                    formattedOutput("DB CLEANER", "***** Status: 200", 
-                        `***** Model: ${currentAction.model}`, `***** Method: ${currentAction.method}`, `***** Query: ${currentAction.query}`);
                     if (currentAction.model === "tokensblacklist")
-                        removeProperties(dbValues, "token");
+                        removeProperties(dbValues, "id", "token");
                     else if (currentAction.model === "user")
                         removeProperties(dbValues, "name", "surname", "role", "password", "thumb", "website", "createdAt", "updatedAt");
+                    formattedOutput("DB CLEANER", "***** Status: 200", 
+                        `***** Model: ${currentAction.model}`, 
+                        `***** Method: ${currentAction.method}`, 
+                        `***** Query: ${JSON.stringify(currentAction.query, null, 2)}`,
+                        `***** Count: ${dbCounts.count}`,
+                        (dbCounts.count !== 0) && `***** Info: ${JSON.stringify(dbValues, null, 2)}`);
                     dbReturnedValues.push(dbValues);
                     dbReturnedCounts.push(dbCounts);
                 }
@@ -127,8 +135,11 @@ const clean = async () =>
                     "data"      :   actionsCopy.map( (action, index) =>
                                         ({
                                             "table" :   action.model,
-                                            "info"  :   dbReturnedValues[index],
-                                            "count" :   dbReturnedCounts[index]
+                                            "count" :   dbReturnedCounts[index].count,
+                                            ...((dbReturnedCounts[index].count === 0)   ?   {}
+                                                                                        :   {
+                                                                                                "info"  :   dbReturnedValues[index]
+                                                                                            })
                                         }))
                 };
                 fileData.push(dataToAppend);
@@ -139,8 +150,12 @@ const clean = async () =>
     }
     catch(error)
     {
-        const errorMsg = (errorDuringPrismaCalls ? "Error occurred while accessing database" : error.message);
-        console.log(errorMsg);
+        const errorMsg =    (errorDuringPrismaCalls 
+                            ?   "Error occurred while accessing database" 
+                            :   (errorDuringFileRead
+                            ?   error.message
+                            :   `Error occurred while writing on file ${completeFileName}`));
+        // console.log(errorMsg);
         throw new Error(errorMsg);
     }
     finally
