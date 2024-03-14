@@ -41,4 +41,4 @@ function generateString(StrLength, StrChar)
     return finalStr;
 }
 
-module.exports = { formattedOutput }
+module.exports = { formattedOutput, generateString }

@@ -12,6 +12,7 @@ const configData =
 [
     {
         "model"         :   "tokensblacklist",
+        "table"         :   "TokenBlackList",
         "prime"         :   2,
         "method"        :   "deleteMany",
         "objKey"        :   "lt",
@@ -21,6 +22,7 @@ const configData =
     },
     {
         "model"         :   "user",
+        "table"         :   "Users",
         "prime"         :   3,
         "method"        :   "updateMany",
         "objKey"        :   "lt",
