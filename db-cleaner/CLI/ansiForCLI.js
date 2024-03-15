@@ -67,7 +67,8 @@ const styledMenuLine = (menuItem, isFocused, isChecked, out, newLine = true) =>
     const styledLine = lineItemArray.join("");
     if (out)
     {
-        stdout.write(styledLine);
+        // Nel caso di stampa a video si inserisce styledLine dentro una stringa di lunghezza pari alla larghezza del terminale (meno un paio di caratteri, per sicurezza) in modo da sovrascrivere i dati precedenti (utile durante la navigazione)
+        stdout.write(styledLine + " ".repeat(stdout.columns - (7 + 2 + menuItem.length)));
         if (newLine)
             stdout.write("\n");
     }

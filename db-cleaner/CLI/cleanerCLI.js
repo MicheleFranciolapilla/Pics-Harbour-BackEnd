@@ -1,7 +1,7 @@
 const readline = require("readline");
 const { stdin, stdout } = require("process");
-const { cursorVisible, cursorUp, outLine, outWarning, outInfo, outChoose, outChoise } = require("./ansiForCLI");
-const { buildMenu, handleNavigation } = require("./menuForCLI");
+const { cursorVisible, outLine, outWarning, outInfo, outChoose, outChoise } = require("./ansiForCLI");
+const { buildMenu, handleNavigation, itemIsAnOption, handleClickOnOption } = require("./menuForCLI");
 const { configData, allowedActions, timerMinValue } = require("../cleanerConfig");
 
 const keyEnter = "\u000D";
@@ -102,12 +102,22 @@ const handleRawMode = async (dataObj) => new Promise( resolve =>
                                             newIndex = menuIndex + 1;
                                         navAction = "nav"; 
                                         break;
-                    case keyEnter   :   break;
+                    case keyEnter   :   navAction = "select";
+                                        break;
                 }
                 if (navAction === "nav")
                     handleNavigation(dataObj, newIndex);
-                else
-                    resolve();
+                else if (navAction === "select")
+                {
+                    if (itemIsAnOption(dataObj, menuIndex))
+                        handleClickOnOption(dataObj, menuIndex);
+                    else
+                    {
+
+                    }
+                    // rawModeOff(handleDynamicSelection);
+                    // resolve();
+                }
             }
         }
 
@@ -166,7 +176,7 @@ const getAllOptions = async () =>
     ];
     outLine("*");
     let request = {};
-    for (let index = 0; index < optionsData.length; index++)
+    for (let index = 1; index < optionsData.length; index++)
     {
         // if ((optionsData[index].name !== "timer") || (request["action"] === "set"))
             request[optionsData[index].name] = await getOption(optionsData[index]);
