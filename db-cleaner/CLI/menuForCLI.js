@@ -1,4 +1,4 @@
-const { moveCursor, writeMenuTitle, writeMenuItem } = require("./ansiForCLI");
+const { moveCursor, writeMenuTitle, writeMenuItem, writeMessage } = require("./ansiForCLI");
 
 const menuLineSet =
 {
@@ -8,6 +8,12 @@ const menuLineSet =
     "cSpaces"   :   2,
     "safety"    :   2
 }
+
+const executeAsyncMethod = async (method, ...arguments) => await method(...arguments);
+
+const returnMenuLineSetLength = () => Object.keys(menuLineSet).reduce( (acc, current) =>    (typeof menuLineSet[current] === "string") 
+                                                                                            ? menuLineSet[current].length + acc
+                                                                                            : menuLineSet[current] + acc, 0);
 
 const getMenuItem = (dataObj, optIndex) =>
 {
@@ -96,4 +102,26 @@ const clickOnOption = async (dataObj, index) =>
     }
 }
 
-module.exports = { buildMenu, navigateMenu, itemIsAnOption, clickOnOption }
+const cursorAfterConfirm = async (dataObj) =>
+{
+    await moveCursor(getCursorStr(getIndexDelta(dataObj, "LAST")));
+    await moveCursor("N-3");
+}
+
+const menuItemErrorMessage = async (dataObj, errorMsg, distance, timeOut) => new Promise( resolve =>
+    {
+        const { currentlyChecked, menuIndex, allowedKeys } = dataObj;
+        const allowedKeysCopy = allowedKeys;
+        dataObj.allowedKeys = [];
+        const menuItem = getMenuItem(dataObj, menuIndex);
+        executeAsyncMethod(moveCursor, `F-${menuItem.length + returnMenuLineSetLength()}`);
+        executeAsyncMethod(writeMessage, " ".repeat(distance).concat("<<< ", errorMsg, " >>>"), "error", "L");
+        setTimeout( () =>
+            {
+                executeAsyncMethod(writeMenuItem, menuItem, true, currentlyChecked.includes(menuIndex), menuLineSet, "L");
+                dataObj.allowedKeys = allowedKeysCopy;
+                resolve();
+            }, timeOut);
+    });
+
+module.exports = { executeAsyncMethod, buildMenu, navigateMenu, itemIsAnOption, clickOnOption, cursorAfterConfirm, menuItemErrorMessage }

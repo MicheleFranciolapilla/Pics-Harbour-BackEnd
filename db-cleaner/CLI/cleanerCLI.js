@@ -1,6 +1,6 @@
 const { stdin } = require("process");
 const { writeMessage, writeQuestion, cursorVisible, closingMessage, line } = require("./ansiForCLI");
-const { buildMenu, navigateMenu, itemIsAnOption, clickOnOption } = require("./menuForCLI");
+const { executeAsyncMethod, buildMenu, navigateMenu, itemIsAnOption, clickOnOption, cursorAfterConfirm, menuItemErrorMessage } = require("./menuForCLI");
 const { configData, allowedActions, timerMinValue } = require("../cleanerConfig");
 
 const keyEnter = "\u000D";
@@ -54,8 +54,6 @@ const rawModeOff = (listener) =>
     stdin.resume();
 }
 
-const executeAsyncMethod = async (method, arguments) => await method(arguments);
-
 const handleRawMode = async (dataObj) => new Promise( resolve =>
     {
         
@@ -72,7 +70,7 @@ const handleRawMode = async (dataObj) => new Promise( resolve =>
 
         const menuHandler = async (navKey) =>
         {
-            const { allowedKeys, menuIndex, maxIndex, type } = dataObj;
+            const { allowedKeys, menuIndex, maxIndex, type, options, required, currentlyChecked } = dataObj;
             if (allowedKeys.includes(navKey))
             {
                 let newIndex = null;
@@ -106,16 +104,29 @@ const handleRawMode = async (dataObj) => new Promise( resolve =>
                         if (isOption)
                         {
                             // Input del timer
+                            
                         }
-                        else if (menuIndex === dataObj.options.length)
+                        else if (menuIndex === options.length)
                         {
                             // Conferma
-                            resolve(menuIndex);
+                            if (required && currentlyChecked.length === 0)
+                                // Errore
+                                await menuItemErrorMessage(dataObj, "A selected option is required", 10, 2000);
+                            else
+                            {
+                                // OK
+                                rawModeOff(menuHandler);
+                                await cursorAfterConfirm(dataObj);
+                                resolve(dataObj.returned());
+                            }
                         }
                         else
                         {
                             // Quit
-                            resolve(menuIndex);
+                            rawModeOff(menuHandler);
+                            await cursorAfterConfirm(dataObj);
+                            await quitCLI();
+                            resolve();
                         }
                     }
                 }
@@ -159,7 +170,7 @@ const getAllOptions = async () =>
             "options"       :   configData.map( ({ model, table, prime }) => ({ model, table, prime })),
             "type"          :   "check",
             get 
-            initialValue()      { return this.options.map( (_, index) => index)},
+            initialValue()      { return this.options.map( (_, index) => index) },
             "required"      :   true,
             "includeQuit"   :   true,
             "labelForQuit"  :   "Quit",
@@ -184,17 +195,18 @@ const getAllOptions = async () =>
             "options"       :   ["Input"],
             "type"          :   "lineInput",
             "initialValue"  :   [],
-            "defaultValue"  :   timerMinValue,
+            "defaultValue"  :   timerMinValue * 3,
             "includeQuit"   :   true,
             "labelForQuit"  :   "Quit",
-            "confirmLabel"  :   `Confirm default: ${this.defaultValue} msec`,
+            get
+            confirmLabel()      { return `Confirm default: ${this.defaultValue} msec` },
             "returned"      :   function() { return this.dataFromInput ?? this.defaultValue }
         }
     ];
 
     await line();
     let request = {};
-    for (let index = 1; index < optionsData.length; index++)
+    for (let index = 0; index < optionsData.length; index++)
     {
         if ((optionsData[index].name !== "timer") || (request["action"] === "set"))
             request[optionsData[index].name] = await getOption(optionsData[index]);

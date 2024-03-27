@@ -10,7 +10,8 @@ const ansi =
     "proceed"   :   style.green + style.bold,
     "quit"      :   style.red + style.bold,
     "info"      :   style.white + style.bold,
-    "focused"   :   style.reset + style.blue
+    "focused"   :   style.reset + style.blue,
+    "error"     :   style.reset + style.red + style.bold
 }
 
 const asyncWrite = util.promisify(stdout.write).bind(stdout);
@@ -83,7 +84,7 @@ const writeMenuItem = async (menuItem, isFocused, isChecked, menuLineSet, cursor
     const lineColor = isFocused ? "focused" : "normal";
     let styledLine = setMessageStyle(lineArray.join(""), ansi[lineColor] + style.bold, ansi[lineColor], "@@@");
     if (wholeLine)
-        styledLine.concat(" ".repeat(stdout.columns - (fSpaces + cSpaces + menuItem.length + 2 + safety)));
+        styledLine += " ".repeat(stdout.columns - (fSpaces + cSpaces + menuItem.length + 2 + safety));
     await asyncWrite(styledLine + cursorCode(cursorStr));
 }
 
