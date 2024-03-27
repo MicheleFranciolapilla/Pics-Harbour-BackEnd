@@ -1,52 +1,43 @@
-const readline = require("readline");
-const { stdin, stdout } = require("process");
-const { cursorVisible, outLine, outWarning, outInfo, outChoose, outChoise } = require("./ansiForCLI");
-const { buildMenu, handleNavigation, itemIsAnOption, handleClickOnOption } = require("./menuForCLI");
+const { stdin } = require("process");
+const { writeMessage, writeQuestion, cursorVisible, closingMessage, line } = require("./ansiForCLI");
+const { buildMenu, navigateMenu, itemIsAnOption, clickOnOption } = require("./menuForCLI");
 const { configData, allowedActions, timerMinValue } = require("../cleanerConfig");
 
 const keyEnter = "\u000D";
 const keyUp = "\x1B[A";
 const keyDown = "\x1B[B";
 
-let cmd = null;
 let originalProcessCtrlCHandler = null;
 
-const initialize = () =>
+const disableCtrlC = async () =>
 {
-    stdin.setEncoding("utf-8");
-    // cursorVisible(false);
-    disableCtrlC();
-}
-
-const initializecmd = () =>
-{
-    cmd = readline.createInterface({ input : stdin, output : stdout });
-    cmd.removeAllListeners("SIGINT");
-}
-
-const disableCtrlC = () =>
-{
-    outWarning("The 'Ctrl-C' key combination will remain disabled for the duration of the CLI.");
     originalProcessCtrlCHandler = process.listeners("SIGINT").slice();
     process.removeAllListeners("SIGINT");
+    await writeMessage("The 'Ctrl-C' key combination will remain disabled for the duration of the CLI.", "warning", "N-3");
 }
 
-const restoreCtrlC = () =>
+const restoreCtrlC = async () =>
 {
     if (originalProcessCtrlCHandler)
     {
         originalProcessCtrlCHandler.forEach( handler => process.on("SIGINT", handler));
         originalProcessCtrlCHandler = null;
     }
-    outWarning("The 'Ctrl-C' key combination is enabled again.");
+    await writeMessage("The 'Ctrl-C' key combination is enabled again.", "warning", "N-2");
 }
 
-const quitCLI = () =>
+const initialize = async () =>
 {
-    outInfo("Thanks for using the DB cleaner CLI");
-    stdin.setRawMode(false);
-    restoreCtrlC();
-    cursorVisible();
+    stdin.setEncoding("utf-8");
+    // await cursorVisible(false);
+    await disableCtrlC();
+}
+
+const quitCLI = async () =>
+{
+    await restoreCtrlC();
+    await closingMessage("Thanks for using the DB cleaner CLI", "info", "N-3");
+    await cursorVisible();
     process.exit();
 }
 
@@ -63,81 +54,99 @@ const rawModeOff = (listener) =>
     stdin.resume();
 }
 
+const executeAsyncMethod = async (method, arguments) => await method(arguments);
+
 const handleRawMode = async (dataObj) => new Promise( resolve =>
     {
-        const resetAfterKeypressed = (answerKey) =>
-        {
-            rawModeOff(handleKeyPressed);
-            outChoise(answerKey, answerKey === dataObj.allowedKeys[0]);
-        }
-
-        const handleKeyPressed = (answerKey) =>
+        
+        const answerKeyHandler = async (answerKey) =>
         {
             answerKey = answerKey.toString().toUpperCase();
             if (dataObj.allowedKeys.includes(answerKey))
             {
-                resetAfterKeypressed(answerKey);
+                rawModeOff(answerKeyHandler);
+                await writeMessage(answerKey, (answerKey === dataObj.allowedKeys[0]) ? "proceed" : "quit", "N-3");
                 resolve(answerKey);
             }
         }
 
-        const handleDynamicSelection = (navigationKey) =>
+        const menuHandler = async (navKey) =>
         {
-            const { rawModeAllowedKeys, menuIndex, maxIndex } = dataObj;
-            if (rawModeAllowedKeys.includes(navigationKey))
+            const { allowedKeys, menuIndex, maxIndex, type } = dataObj;
+            if (allowedKeys.includes(navKey))
             {
                 let newIndex = null;
                 let navAction = null;
-                switch (navigationKey)
+                switch (navKey)
                 {
-                    case keyUp      :   if (menuIndex === 0)
+                    case keyUp      :   navAction = "nav";
+                                        if (menuIndex === 0)
                                             newIndex = maxIndex;
                                         else
                                             newIndex = menuIndex - 1;
-                                        navAction = "nav";
                                         break;
-                    case keyDown    :   if (menuIndex === maxIndex)
+                    case keyDown    :   navAction = "nav";
+                                        if (menuIndex === maxIndex)
                                             newIndex = 0;
                                         else
                                             newIndex = menuIndex + 1;
-                                        navAction = "nav"; 
                                         break;
                     case keyEnter   :   navAction = "select";
                                         break;
                 }
                 if (navAction === "nav")
-                    handleNavigation(dataObj, newIndex);
+                    await navigateMenu(dataObj, newIndex);
                 else if (navAction === "select")
                 {
-                    if (itemIsAnOption(dataObj, menuIndex))
-                        handleClickOnOption(dataObj, menuIndex);
+                    const isOption = itemIsAnOption(dataObj, menuIndex);
+                    if (isOption && (type !== "lineInput"))
+                        await clickOnOption(dataObj, menuIndex);
                     else
                     {
-
+                        if (isOption)
+                        {
+                            // Input del timer
+                        }
+                        else if (menuIndex === dataObj.options.length)
+                        {
+                            // Conferma
+                            resolve(menuIndex);
+                        }
+                        else
+                        {
+                            // Quit
+                            resolve(menuIndex);
+                        }
                     }
-                    // rawModeOff(handleDynamicSelection);
-                    // resolve();
                 }
             }
         }
 
         rawModeOn();
-        if (dataObj.dynamic)    
-        {
-            buildMenu(dataObj);
-            stdin.on("data", handleDynamicSelection);
-        }
-        else
-        {
-            outChoose(dataObj.message);
-            stdin.on("data", handleKeyPressed);
-        }
+        ( async () => 
+            {
+                let method = null;
+                let arguments = null;
+                switch (dataObj.dialogType)
+                {
+                    case "simple"   :   method = writeQuestion;
+                                        arguments = dataObj.message;
+                                        dataObj["handler"] = answerKeyHandler;
+                                        break;
+                    case "menu"     :   method = buildMenu;
+                                        arguments = dataObj;
+                                        dataObj["handler"] = menuHandler;
+                }
+                await executeAsyncMethod(method, arguments);
+                stdin.on("data", dataObj.handler);
+            })();
     });
-
-const getOption = async (baseObj) => 
+    
+const getOption = async (basicObj) =>
 {
-    const dataObj = { ...baseObj, "rawModeAllowedKeys" : [keyEnter, keyUp, keyDown], "dynamic" : true };
-    await handleRawMode(dataObj);
+    const dataObj = { ...basicObj, "allowedKeys" : [keyEnter, keyUp, keyDown], "dialogType" : "menu" };
+    const option = await handleRawMode(dataObj);
+    return option;
 }
 
 const getAllOptions = async () =>
@@ -151,8 +160,11 @@ const getAllOptions = async () =>
             "type"          :   "check",
             get 
             initialValue()      { return this.options.map( (_, index) => index)},
+            "required"      :   true,
             "includeQuit"   :   true,
-            "labelForQuit"  :   "Quit"
+            "labelForQuit"  :   "Quit",
+            "confirmLabel"  :   "Confirm",
+            "returned"      :   function() {  return this.currentlyChecked.reduce( (acc, current) => this.options[current].prime * acc, 1); }
         },
         {
             "name"          :   "action",
@@ -160,25 +172,31 @@ const getAllOptions = async () =>
             "options"       :   allowedActions,
             "type"          :   "radio",
             "initialValue"  :   [0],
+            "required"      :   true,
             "includeQuit"   :   true,
-            "labelForQuit"  :   "Quit"
+            "labelForQuit"  :   "Quit",
+            "confirmLabel"  :   "Confirm",
+            "returned"      :   function() { return this.options[this.currentlyChecked[0]]; }
         },
         {
             "name"          :   "timer",
             "message"       :   `Enter the time interval (milliseconds) between cleaning cycles. (@@@Minimum value allowed: [${timerMinValue}]@@@)...`,
-            "options"       :   ["Input", "Default"],
-            "type"          :   "mixed",
-            "initialValue"  :   [1],
+            "options"       :   ["Input"],
+            "type"          :   "lineInput",
+            "initialValue"  :   [],
             "defaultValue"  :   timerMinValue,
             "includeQuit"   :   true,
-            "labelForQuit"  :   "Quit"
+            "labelForQuit"  :   "Quit",
+            "confirmLabel"  :   `Confirm default: ${this.defaultValue} msec`,
+            "returned"      :   function() { return this.dataFromInput ?? this.defaultValue }
         }
     ];
-    outLine("*");
+
+    await line();
     let request = {};
     for (let index = 1; index < optionsData.length; index++)
     {
-        // if ((optionsData[index].name !== "timer") || (request["action"] === "set"))
+        if ((optionsData[index].name !== "timer") || (request["action"] === "set"))
             request[optionsData[index].name] = await getOption(optionsData[index]);
     }
     return request;
@@ -186,14 +204,15 @@ const getAllOptions = async () =>
 
 const quitOrProceed = async (isFirstQuestion = true) =>
 {
-    const question =    (isFirstQuestion)  
+
+    const question =    (isFirstQuestion)
                         ? "Please press: '@@@P@@@' (proceed) or '@@@Q@@@' (quit) ...   [ ]"
-                        : "Run db Cleaner again - [@@@Y@@@/@@@N@@@]? ...   [ ]"
-    dataObj = 
+                        : "Run db Cleaner again - [@@@Y@@@/@@@N@@@]? ...   [ ]";
+    dataObj =
     {
         "message"       :   question,
-        "dynamic"       :   false,
-        "allowedKeys"   :   (isFirstQuestion ? ["P", "Q"] : ["Y", "N"])
+        "dialogType"    :   "simple",
+        "allowedKeys"   :   (isFirstQuestion) ? ["P", "Q"] : ["Y", "N"]
     };
     const answerKey = await handleRawMode(dataObj);
     if (answerKey === dataObj.allowedKeys[0])
@@ -201,12 +220,12 @@ const quitOrProceed = async (isFirstQuestion = true) =>
         const request = await getAllOptions();
     }
     else
-        quitCLI();
+        await quitCLI();
 }
 
 // IIFE
 ( async () =>
 {
-    initialize();
+    await initialize();
     await quitOrProceed();
 })()
