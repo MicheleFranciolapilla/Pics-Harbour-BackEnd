@@ -3,7 +3,7 @@ const path = require("path");
 
 const { isDivisibleBY, deepFindAndReplace, removeProperties, objectDeepCopy } = require("../server/utilities/general");
 const { formattedOutput } = require("../server/utilities/consoleOutput");
-const { reportFileData, allowedActions, timerMinValue, configData, cleanerOutcome } = require("./cleanerConfig");
+const { reportFileData, allowedActions, timerData, configData, cleanerOutcome } = require("./cleanerConfig");
 const { prisma } = require("../server/utilities/prismaCalls");
 
 const ErrorUnsupportedFile = require("../server/exceptionsAndMiddlewares/exceptions/ErrorUnsupportedFile");
@@ -22,7 +22,9 @@ const validateRequestedAction = (requestedAction) =>
     return result;
 }
 
-const setIntervalTime = (value) => intervalTime = ((typeof value === "number") && (value > timerMinValue)) ? value : timerMinValue;
+const setIntervalTime = (value) => intervalTime =   ((typeof value === "number") && ((value >= timerData.minValue.msec) && (value <= timerData.maxValue.msec))) 
+                                                    ? value 
+                                                    : timerData.minValue.msec;
 
 const resetCleaner = () => 
 {

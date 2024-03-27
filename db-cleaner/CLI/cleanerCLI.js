@@ -1,7 +1,7 @@
 const { stdin } = require("process");
 const { writeMessage, writeQuestion, cursorVisible, closingMessage, line } = require("./ansiForCLI");
 const { executeAsyncMethod, buildMenu, navigateMenu, itemIsAnOption, clickOnOption, cursorAfterConfirm, menuItemErrorMessage } = require("./menuForCLI");
-const { configData, allowedActions, timerMinValue } = require("../cleanerConfig");
+const { configData, allowedActions, timerData } = require("../cleanerConfig");
 
 const keyEnter = "\u000D";
 const keyUp = "\x1B[A";
@@ -104,7 +104,7 @@ const handleRawMode = async (dataObj) => new Promise( resolve =>
                         if (isOption)
                         {
                             // Input del timer
-                            
+
                         }
                         else if (menuIndex === options.length)
                         {
@@ -191,11 +191,11 @@ const getAllOptions = async () =>
         },
         {
             "name"          :   "timer",
-            "message"       :   `Enter the time interval (milliseconds) between cleaning cycles. (@@@Minimum value allowed: [${timerMinValue}]@@@)...`,
+            "message"       :   `Enter the time interval (milliseconds) between cleaning cycles. (@@@Minimum value allowed: [${timerData.minValue.msec} - (${timerData.minValue.str})]@@@) / (@@@Maximum value allowed: [${timerData.maxValue.msec} - (${timerData.maxValue.str})]@@@)...`,
             "options"       :   ["Input"],
             "type"          :   "lineInput",
             "initialValue"  :   [],
-            "defaultValue"  :   timerMinValue * 3,
+            "defaultValue"  :   timerData.minValue.msec * 3,
             "includeQuit"   :   true,
             "labelForQuit"  :   "Quit",
             get

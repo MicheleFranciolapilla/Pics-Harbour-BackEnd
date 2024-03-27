@@ -6,7 +6,17 @@ const reportFileData =
 
 const allowedActions = ["clean", "set", "reset"];
 
-const timerMinValue = 60000; /* 1 minuto */
+const timerData =
+{
+    "minValue"  :   {
+                        msec    :   60000,
+                        str     :   "1 minute"  
+                    },
+    "maxValue"  :   {
+                        msec    :   604800000,
+                        str     :   "1 week"
+                    }
+}
 
 const configData =
 [
@@ -43,5 +53,5 @@ const cleanerOutcome =
         "requested action impossible: no valid table specified"
 ]
 
-module.exports = { reportFileData, allowedActions, timerMinValue, configData, cleanerOutcome }
+module.exports = { reportFileData, allowedActions, timerData, configData, cleanerOutcome }
 
