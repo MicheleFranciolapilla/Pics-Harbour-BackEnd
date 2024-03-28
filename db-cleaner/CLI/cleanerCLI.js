@@ -1,13 +1,17 @@
 const { stdin } = require("process");
-const { writeMessage, writeQuestion, cursorVisible, closingMessage, line } = require("./ansiForCLI");
-const { executeAsyncMethod, buildMenu, navigateMenu, itemIsAnOption, clickOnOption, cursorAfterConfirm, menuItemErrorMessage } = require("./menuForCLI");
+const { writeMessage, writeQuestion, cursorVisible, closingMessage, line, moveCursor } = require("./ansiForCLI");
+const { executeAsyncMethod, buildMenu, navigateMenu, itemIsAnOption, clickOnOption, cursorAfterConfirm, menuItemErrorMessage, timerInput, quitTimerInput } = require("./menuForCLI");
 const { configData, allowedActions, timerData } = require("../cleanerConfig");
 
 const keyEnter = "\u000D";
 const keyUp = "\x1B[A";
 const keyDown = "\x1B[B";
+const keyEscape = "\x1b";
+const keysBackSpace = ["\x08", "\x7f"];
+const keysDigits = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
 
 let originalProcessCtrlCHandler = null;
+let rawModeStatus = false;
 
 const disableCtrlC = async () =>
 {
@@ -43,16 +47,26 @@ const quitCLI = async () =>
 
 const rawModeOn = () =>
 {
-    stdin.setRawMode(true);
-    stdin.resume();
+    if (!rawModeStatus)
+    {
+        stdin.setRawMode(true);
+        stdin.resume();
+        rawModeStatus = true;
+    }
 }
 
 const rawModeOff = (listener) =>
 {
     stdin.removeListener("data", listener);
-    stdin.setRawMode(false);
-    stdin.resume();
+    if (rawModeStatus)
+    {
+        stdin.setRawMode(false);
+        stdin.resume();
+        rawModeStatus = false;
+    }
 }
+
+const isValidDigit = (currentStr, digitKey, max) => !(((currentStr === "") && (digitKey === "0")) || (parseInt(currentStr + digitKey) > max));
 
 const handleRawMode = async (dataObj) => new Promise( resolve =>
     {
@@ -104,7 +118,27 @@ const handleRawMode = async (dataObj) => new Promise( resolve =>
                         if (isOption)
                         {
                             // Input del timer
-
+                            await clickOnOption(dataObj, menuIndex);
+                            dataObj["allowedKeysCopy"] = allowedKeys;
+                            dataObj.allowedKeys = [];
+                            const timerInObj =
+                            {
+                                "message"       :   "[@@@ESC@@@] to cancel / [@@@ENTER@@@] to confirm...",
+                                "distances"     :   [10, 5],
+                                "dialogType"    :   "input",
+                                "allowedKeys"   :   [...keysBackSpace, keyEscape, ...keysDigits, keyEnter],
+                                "min"           :   timerData.minValue.msec,
+                                "max"           :   timerData.maxValue.msec,
+                                "currentStr"    :   "",
+                                "parent"        :   dataObj
+                            }
+                            const timerByInput = await handleRawMode(timerInObj);
+                            if (timerByInput)
+                            {
+                                rawModeOff(menuHandler);
+                                await cursorAfterConfirm(dataObj);
+                                resolve(dataObj.returned());
+                            }
                         }
                         else if (menuIndex === options.length)
                         {
@@ -133,6 +167,51 @@ const handleRawMode = async (dataObj) => new Promise( resolve =>
             }
         }
 
+        const timerInputHandler = async (inputKey) =>
+        {
+            const { allowedKeys, currentStr, min, max } = dataObj;
+            if (allowedKeys.includes(inputKey))
+            {
+                if (inputKey === keyEscape)
+                {
+                    stdin.removeListener("data", timerInputHandler);
+                    await quitTimerInput(dataObj);
+                    resolve(false);
+                }
+                else if (keysDigits.includes(inputKey))
+                {
+                    if (isValidDigit(currentStr, inputKey, max))
+                    {
+                        dataObj.currentStr += inputKey;
+                        await writeMessage(inputKey, "highlight");
+                    }
+                }
+                else if (keysBackSpace.includes(inputKey))
+                {
+                    if (currentStr !== "")
+                    {
+                        dataObj.currentStr = currentStr.slice(0, currentStr.length - 1);
+                        await moveCursor("B-1");
+                        await writeMessage(" ", "highlight", "B-1");
+                    }
+                }
+                else if (inputKey === keyEnter)
+                {
+                    if (currentStr === "")
+                        await menuItemErrorMessage(dataObj, `No value entered!`, 10, 2000);
+                    else if (parseInt(currentStr) < min)
+                        await menuItemErrorMessage(dataObj, `The value cannot be lower than ${min} msec`, 10, 2000);
+                    else
+                    {
+                        stdin.removeListener("data", timerInputHandler);
+                        dataObj.parent["dataFromInput"] = parseInt(currentStr);
+                        quitTimerInput(dataObj, false);
+                        resolve(true);
+                    }
+                }
+            }
+        }
+
         rawModeOn();
         ( async () => 
             {
@@ -147,6 +226,11 @@ const handleRawMode = async (dataObj) => new Promise( resolve =>
                     case "menu"     :   method = buildMenu;
                                         arguments = dataObj;
                                         dataObj["handler"] = menuHandler;
+                                        break;
+                    case "input"    :   method = timerInput;
+                                        arguments = dataObj;
+                                        dataObj["handler"] = timerInputHandler;
+                                        break;
                 }
                 await executeAsyncMethod(method, arguments);
                 stdin.on("data", dataObj.handler);
@@ -230,6 +314,8 @@ const quitOrProceed = async (isFirstQuestion = true) =>
     if (answerKey === dataObj.allowedKeys[0])
     {
         const request = await getAllOptions();
+        console.log(request);
+        process.exit();
     }
     else
         await quitCLI();

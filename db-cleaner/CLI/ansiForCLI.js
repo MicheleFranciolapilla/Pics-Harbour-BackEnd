@@ -45,7 +45,7 @@ const cursorCode = (cursorStr) =>
     // L:           line origin
     // L-number:    absolute to column
     if (!cursorStr)
-        return;
+        return "";
     const cursorTo = cursorStr.toUpperCase();
     const lines = (cursorTo.includes("-")) ? parseInt(cursorTo.substring(2)) : 1;
     switch (cursorTo[0])

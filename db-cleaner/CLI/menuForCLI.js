@@ -1,4 +1,4 @@
-const { moveCursor, writeMenuTitle, writeMenuItem, writeMessage } = require("./ansiForCLI");
+const { moveCursor, writeMenuTitle, writeMenuItem, writeMessage, writeQuestion } = require("./ansiForCLI");
 
 const menuLineSet =
 {
@@ -98,7 +98,9 @@ const clickOnOption = async (dataObj, index) =>
                                     dataObj.currentlyChecked[0] = index;
                                 }
                                 break;
-        case "lineInput"    :   break;
+        case "lineInput"    :   toggleOptionCheck(dataObj, index);
+                                await writeMenuItem(getMenuItem(dataObj, index), true, true, menuLineSet, "L");
+                                break;
     }
 }
 
@@ -110,18 +112,40 @@ const cursorAfterConfirm = async (dataObj) =>
 
 const menuItemErrorMessage = async (dataObj, errorMsg, distance, timeOut) => new Promise( resolve =>
     {
-        const { currentlyChecked, menuIndex, allowedKeys } = dataObj;
+        const { parent, allowedKeys, menuIndex } = dataObj;
+        parent ?? executeAsyncMethod(moveCursor, `F-${getMenuItem(dataObj, menuIndex).length + returnMenuLineSetLength()}`);
         const allowedKeysCopy = allowedKeys;
         dataObj.allowedKeys = [];
-        const menuItem = getMenuItem(dataObj, menuIndex);
-        executeAsyncMethod(moveCursor, `F-${menuItem.length + returnMenuLineSetLength()}`);
-        executeAsyncMethod(writeMessage, " ".repeat(distance).concat("<<< ", errorMsg, " >>>"), "error", "L");
+        executeAsyncMethod(writeMessage, " ".repeat(distance).concat("<<< ", errorMsg, " >>>"), "error", `B-${distance + 8 + errorMsg.length}`);
         setTimeout( () =>
             {
-                executeAsyncMethod(writeMenuItem, menuItem, true, currentlyChecked.includes(menuIndex), menuLineSet, "L");
+                executeAsyncMethod(writeMessage, " ".repeat(distance + 8 + errorMsg.length), "error", parent ? `B-${distance + 8 + errorMsg.length}` : `L`);
                 dataObj.allowedKeys = allowedKeysCopy;
                 resolve();
             }, timeOut);
     });
 
-module.exports = { executeAsyncMethod, buildMenu, navigateMenu, itemIsAnOption, clickOnOption, cursorAfterConfirm, menuItemErrorMessage }
+const timerInput = async (timerInObj) =>
+{
+    const { parent, distances, message } = timerInObj;
+    await moveCursor(`F-${getMenuItem(parent, parent.menuIndex).length + returnMenuLineSetLength() + distances[0]}`);
+    await writeQuestion(message + "  ");
+    await moveCursor(`F-${distances[1]}`);
+}
+
+const quitTimerInput = async (timerInObj, escapeKey = true) =>
+{
+    const { parent } = timerInObj;
+    await moveCursor("L");
+    if (escapeKey)
+    {
+        toggleOptionCheck(parent, parent.menuIndex);
+        await writeMenuItem(getMenuItem(parent, parent.menuIndex), false, false, menuLineSet, getCursorStr(getIndexDelta(parent, parent.options.length)));
+        parent.menuIndex = parent.options.length;
+        await writeMenuItem(getMenuItem(parent, parent.menuIndex), true, false, menuLineSet, "L");
+    }
+    parent.allowedKeys = parent.allowedKeysCopy;
+    delete parent.allowedKeysCopy;
+}
+
+module.exports = { executeAsyncMethod, buildMenu, navigateMenu, itemIsAnOption, clickOnOption, cursorAfterConfirm, menuItemErrorMessage, timerInput, quitTimerInput }
